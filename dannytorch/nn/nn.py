@@ -1,7 +1,11 @@
 from dannytorch.tensor import tensor, rand
 import numpy as np
+from typing import OrderedDict
 
 class Module:
+
+    def __init__(self):
+        self._module = []
 
     def zero_grad(self):
         for p in self.parameters():
@@ -9,8 +13,13 @@ class Module:
 
     def parameters(self):
         return []
+    
+    #TODO:check if this is thorough
+    def add_module(self, module):
+        self._module.append(module)
 
-#TODO: Build in Xavier, He initialization etc.
+
+#TODO: Build in Xavier, He, Kaiming initialization etc.
 class Linear(Module):
 
     def __init__(self, nin, nout, nonlin=True):
@@ -96,3 +105,56 @@ class CrossEntropyLoss:
         out._backward = _backward
 
         return out
+        
+class Dropout: #for training, but not for inference!
+    
+    def __init__(self, p=0.5):
+        self.p = p
+        self.mask = None
+        
+    def __call__(self, x, training=True):
+        if not training:
+            return x
+        
+        self.mask = np.random.rand(*x.shape) > self.p #might need .astype(float)
+        return x * self.mask / (1-self.p)
+    
+class LayerNorm:
+    
+    def __init__(self, eps=1e-5):
+        self.eps = eps
+        
+        
+class RMSNorm:
+    
+    def __init__(self):
+        pass
+    
+class Sequential(Module):
+
+    def __init__(self, *args):
+        if isinstance(args[0], OrderedDict):
+            for key, module in args[0].items():
+                self.add_module(key, module)
+        else:
+            for idx, module in enumerate(args):
+                self.add_module(str(idx), module)
+                
+    def forward(self, x):
+        
+        for module in self:
+            x = module(x)
+        return x
+    
+    def append(self, module: Module):
+        self.add_module(str(len(self)), module)
+        return self
+    
+    def insert(self, idx, module:Module):
+        pass
+    
+    def extend(self, other):
+        
+        for layer in other:
+            self.append(layer)
+        return self
