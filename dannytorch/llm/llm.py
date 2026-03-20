@@ -1,9 +1,14 @@
 import nn.nn as nn
 import numpy as np
 
+"""
+w/ Module update my require super().__init__
+need_weights maybe?
+figure out batch_first logic
+"""
 class MultiheadAttention(nn.Module):
     
-    def __init__(self, embed_dim, n_heads):
+    def __init__(self, embed_dim, n_heads, dropout=0.15, batch_first=False):
         pass
 
     def forward(self, x):
@@ -12,7 +17,7 @@ class MultiheadAttention(nn.Module):
 class TransformerBlock(nn.Module):
 
     def __init__(self, d_model=128, n_heads=4, dropout=0.15):
-        self.attn = MultiheadAttention(embed_dim=embed_dim, n_heads=n_heads)
+        self.attn = MultiheadAttention(d_model=d_model, n_heads=n_heads, dropout=dropout)
         self.ln1 = nn.LayerNorm()
         self.ln2 = nn.LayerNorm()
 
@@ -25,7 +30,15 @@ class TransformerBlock(nn.Module):
         ])
 
     def forward(self, x):
-        pass
+        attn_out = self.attn(x,x,x)
+        x = x + attn_out
+        x = self.ln1(x)
+
+        mlp_out = self.mlp(x)
+        x = x + mlp_out
+        x = self.ln2(x)
+
+        return x #hooray!
 
 class Transformer(nn.Module):
     
@@ -63,7 +76,6 @@ class Transformer(nn.Module):
 #see what would the difference between this and Transformer (this might be verbose)    
 class GPT(nn.Module):
 
-    
     def __init__(self):
         pass
     
