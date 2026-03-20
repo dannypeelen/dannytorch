@@ -1,5 +1,6 @@
 import dannytorch as dt
 import dannytorch.nn as nn
+import dannytorch.optim as optim
 
 
 # #=============MINST TEST====================
@@ -12,6 +13,7 @@ from keras.datasets import mnist
 
 mlp = nn.MLP(784, [64, 64, 10])
 cse = nn.CrossEntropyLoss()
+adam = optim.Adam(mlp.parameters())
 
 (train_X, train_y), (test_X, test_y) = mnist.load_data()
 
@@ -28,8 +30,11 @@ for epoch in range(1, 11):
 
         mlp.zero_grad()
         loss.backward()
-        for p in mlp.parameters():
-            p.data = p.data - 0.01 * p.grad
+        #TODO: test this with all optimizers instead
+        adam.step()
+
+        # for param in mlp.parameters():
+        #     param.data = param.data - 0.01 * param.grad
 
         if start % 6400 == 0:
             print(f"Epoch {epoch}, step {start // batch_size}: Loss={loss.data:.4f}")

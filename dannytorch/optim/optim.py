@@ -1,4 +1,5 @@
-from scheduler.scheduler import StepLR
+from dannytorch.optim.scheduler.scheduler import StepLR
+import numpy as np
 
 class Adam:
 
@@ -12,7 +13,7 @@ class Adam:
 
     def step(self, eps=1e-8):
         self.t += 1
-        #TODO: figure out fallback here
+        #TODO: figure out fallback here & check v and s logic with parameter call
         for i, param in enumerate(self.params):
             grad = param.grad
             self.v[i] = self.betas[0] * self.v[i-1] + (1 - self.betas[0]) * grad
@@ -23,7 +24,7 @@ class Adam:
             s_hat = self.s[i] / (1- self.betas[1])
             
             delta_w = -self.lr * (v_hat / np.sqrt(s_hat + eps) * grad)
-            param.data += delta_w
+            param.data = param.data + delta_w
             
 class RMSProp:
     
