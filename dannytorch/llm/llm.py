@@ -57,7 +57,7 @@ class Transformer(nn.Module):
         self.out_head = nn.Linear(d_model, vocab_size)
 
     def forward(self, x):
-        batch_size, seq_len = x.shape
+        _, seq_len = x.shape
 
         x = self.embedding(x) * np.sqrt(self.d_model)
 

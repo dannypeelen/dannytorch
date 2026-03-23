@@ -1,6 +1,7 @@
 import dannytorch as dt
 import dannytorch.nn as nn
 import dannytorch.optim as optim
+import dannytorch.optim.scheduler as scheduler
 
 
 # #=============MINST TEST====================
@@ -13,13 +14,15 @@ from keras.datasets import mnist
 
 mlp = nn.MLP(784, [64, 64, 10])
 cse = nn.CrossEntropyLoss()
+
 adam = optim.Adam(mlp.parameters())
+scheduler = scheduler.ExponentialLR(adam, step_size=1)
 
 (train_X, train_y), (test_X, test_y) = mnist.load_data()
 
 batch_size = 32
 
-for epoch in range(1, 11):
+for epoch in range(1, 5):
     for start in range(0, len(train_X), batch_size):
         end = min(start + batch_size, len(train_X))
 
@@ -30,15 +33,17 @@ for epoch in range(1, 11):
 
         mlp.zero_grad()
         loss.backward()
-        #TODO: test this with all optimizers instead
-        adam.step()
+
 
         # for param in mlp.parameters():
         #     param.data = param.data - 0.01 * param.grad
 
+        adam.step()
+
         if start % 6400 == 0:
             print(f"Epoch {epoch}, step {start // batch_size}: Loss={loss.data:.4f}")
 
+    scheduler.step()
 #FROM 7.8 to 0.12
 
 #=============MLP TEST======================

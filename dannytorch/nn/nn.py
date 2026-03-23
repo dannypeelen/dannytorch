@@ -24,7 +24,7 @@ class Linear(Module):
 
     def __init__(self, nin, nout, nonlin=True):
         # self.nodes = [Node(nin, **kwargs) for _ in range(nout)]
-        self.w = tensor(np.random.rand(nin, nout) * np.sqrt(2.0 / nin))
+        self.w = tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin))
         self.b = tensor([0 for _ in range(nout)])
         self.nonlin = nonlin
 

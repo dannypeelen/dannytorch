@@ -1,3 +1,3 @@
-from .scheduler import StepLR
+from .scheduler import StepLR, ExponentialLR
 
-__all__ = ['StepLR']
+__all__ = ['StepLR', 'ExponentialLR']
