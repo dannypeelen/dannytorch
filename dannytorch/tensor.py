@@ -79,15 +79,24 @@ class tensor:
         out._backward = _backward
 
         return out
-
-    def leaky_relu(self):
-        pass
-    
-    def gelu(self):
+   
+    def gelu(self): #TODO: just do whenever
         pass
 
     def sigmoid(self):
         pass
+
+    #TODO: computer back pass math
+    def silu(self):
+        out = tensor(self.data / (1+ np.exp(-self.data)))
+
+        def _backward():
+            self.grad += 1
+        out._backward = _backward
+
+        return out
+
+
     #=============end activation functions========
 
     def __neg__(self):

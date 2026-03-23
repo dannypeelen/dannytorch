@@ -14,10 +14,18 @@ class Module:
     def parameters(self):
         return []
     
-    #TODO:check if this is thorough
     def add_module(self, module):
         self._module.append(module)
 
+
+class Embedding(Module):
+
+    def __init__(self, n_embeddings, embedding_dim):
+        self.embedding = np.zeros(n_embeddings, embedding_dim)
+
+    #TODO: figure this out
+    def forward(self, input):
+        pass
 
 #TODO: Build in Xavier, He, Kaiming initialization etc.
 class Linear(Module):
@@ -106,7 +114,7 @@ class CrossEntropyLoss:
 
         return out
         
-class Dropout: #for training, but not for inference!
+class Dropout(Module): #for training, but not for inference! TODO: make sure this is good w/ Module
     
     def __init__(self, p=0.5):
         self.p = p
@@ -119,10 +127,19 @@ class Dropout: #for training, but not for inference!
         self.mask = np.random.rand(*x.shape) > self.p #might need .astype(float)
         return x * self.mask / (1-self.p)
     
-class LayerNorm:
+class LayerNorm(Module): #TODO: check, see how to do mean and var
     
-    def __init__(self, eps=1e-5):
+    def __init__(self, features, eps=1e-5):
+        # super().__init__()
         self.eps = eps
+        self.gamma = 0 #this has to be nn.Paramter, worth building?
+        self.beta = 0 #^
+
+    def forward(self, x):  
+        mean = x.mean()
+        var = x.var()
+        return self.gamma * (x-mean) / np.sqrt(var+self.eps) + self.beta
+
         
         
 class RMSNorm:
@@ -158,3 +175,21 @@ class Sequential(Module):
         for layer in other:
             self.append(layer)
         return self
+    
+def ReLU(input):
+    return input.relu()
+
+#not sure how useful this is, plus silu incomplete
+class SwiGLU(Module):
+    
+    def __init__(self, nin, nout):
+        super().__init__()
+        self.w1 = Linear(nin, nout)
+        self.w2 = Linear(nin, nout)
+
+    def forward(self, x):
+        return self.w1(x).silu() * self.w2(x)
+
+
+def sigmoid(input):
+    pass
