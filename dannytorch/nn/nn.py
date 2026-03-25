@@ -134,7 +134,7 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
         self.mask = np.random.rand(*x.shape) > self.p #might need .astype(float)
         return x * self.mask / (1-self.p)
     
-class LayerNorm(Module): #TODO: check, see how to do mean and var
+class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with autograd
     
     def __init__(self, features, eps=1e-5):
         # super().__init__()
