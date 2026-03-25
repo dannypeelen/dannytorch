@@ -1,4 +1,5 @@
 import nn.nn as nn
+import dt.lang as lang
 import numpy as np
 
 """
@@ -8,8 +9,17 @@ figure out batch_first logic
 """
 class MultiheadAttention(nn.Module):
     
-    def __init__(self, embed_dim, n_heads, dropout=0.15, batch_first=False):
-        pass
+    def __init__(self, d_model, n_heads, dropout=0.02, batch_first=False, use_rope=True):
+        assert d_model % n_heads == 0, "number of heads must divide model dimension evenly, can't have uneven heads!!"
+        self.d_model = d_model
+        self.head_dim = self.d_model // n_heads
+        assert self.head_dim % 2 == 0, "head_dim must be even for RoPE"
+
+        #need some projections here
+
+        self.use_rope = use_rope
+        self.pos_enc = lang.positional_encoding() 
+        self.attn_dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         pass

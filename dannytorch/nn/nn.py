@@ -18,28 +18,33 @@ class Module:
         self._module.append(module)
 
 
-class Embedding(Module):
+class Embedding(Module): #padding_idx is a thing
 
     def __init__(self, n_embeddings, embedding_dim):
-        self.embedding = np.zeros(n_embeddings, embedding_dim)
+        self.embedding = np.random.randn(n_embeddings, embedding_dim)
 
     #TODO: figure this out
     def forward(self, input):
-        pass
+        return self.weigh
 
-#TODO: Build in Xavier, He, Kaiming initialization etc.
 class Linear(Module):
 
-    def __init__(self, nin, nout, nonlin=True):
+    #He best for relu networks
+    def __init__(self, nin, nout, activation='relu', init='He'): #only alternate is Xavier, TODO: build in normal vs uniform
         # self.nodes = [Node(nin, **kwargs) for _ in range(nout)]
-        self.w = tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin))
+        self.init = init
+        if self.init == 'He': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin)) 
+        if self.init == 'Xavier': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(6.0 / (nin + nout)))
         self.b = tensor([0 for _ in range(nout)])
-        self.nonlin = nonlin
-
+        self.activation = activation
+        
     def __call__(self, x):
         x = x if isinstance(x, tensor) else tensor(x)
         out  = x @ self.w + self.b
-        out = out.relu() if self.nonlin else out
+        if self.activation == 'relu': out = out.relu() 
+        if self.activation == 'gelu': out = out.gelu() #build into tensor
+
+
         return out
     
     def parameters(self):
@@ -50,15 +55,17 @@ class Linear(Module):
 
 class MLP(Module):
 
-    def __init__(self, nin, nouts:list):
+    def __init__(self, nin, nouts:list, activation='relu', init='He', dropout=0.0):
         sz = [nin] + nouts
-        self.layers = [Linear(sz[i], sz[i+1], nonlin=i!=len(nouts)-1) for i in range(len(nouts))]
+        self.layers = [Linear(sz[i], sz[i+1], activation= activation, init=init if i!=len(nouts)-1 else 'none') for i in range(len(nouts))]
+        self.dropout = Dropout(dropout) if dropout > 0 else None
 
-    def __call__(self, x):  
-        for layer in self.layers:
+    def __call__(self, x, training=True):  
+        for layer in self.layers[:-1]:
             x = layer(x)
+            if self.dropout: x = self.dropout(x, training) 
 
-        return x
+        return self.layers[-1](x)
     
     def parameters(self):
         return [p for layer in self.layers for p in layer.parameters()]
@@ -156,7 +163,10 @@ class Sequential(Module):
         else:
             for idx, module in enumerate(args):
                 self.add_module(str(idx), module)
-                
+
+    def __iter__(self):
+        pass
+        
     def forward(self, x):
         
         for module in self:

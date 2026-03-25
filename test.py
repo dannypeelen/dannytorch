@@ -2,48 +2,59 @@ import dannytorch as dt
 import dannytorch.nn as nn
 import dannytorch.optim as optim
 import dannytorch.optim.scheduler as scheduler
+from datasets import load_dataset
 
+#================LLM TEST=====================
 
-# #=============MINST TEST====================
+#use cosmopedia-100k?
+
+#load dataset
+ds = load_dataset("HuggingFaceTB/cosmopedia-100k", split="train")
+print(ds)
+#things to remember:
+# - good balance of num_epochs and epoch size
+# - keep "prompt", "text" sections
+
+# #=============MNIST TEST====================
 # import kagglehub
-from keras.datasets import mnist
+# from keras.datasets import mnist
 
-# Download latest version
-# path = kagglehub.dataset_download("hojjatk/mnist-dataset")
-# print(f"Path: {path}")
+# # Download latest version
+# # path = kagglehub.dataset_download("hojjatk/mnist-dataset")
+# # print(f"Path: {path}")
 
-mlp = nn.MLP(784, [64, 64, 10])
-cse = nn.CrossEntropyLoss()
+# mlp = nn.MLP(784, [64, 64, 10])
+# cse = nn.CrossEntropyLoss()
 
-adam = optim.Adam(mlp.parameters())
-scheduler = scheduler.ExponentialLR(adam, step_size=1)
+# adam = optim.Adam(mlp.parameters())
+# scheduler = scheduler.ExponentialLR(adam, step_size=1)
 
-(train_X, train_y), (test_X, test_y) = mnist.load_data()
+# (train_X, train_y), (test_X, test_y) = mnist.load_data()
 
-batch_size = 32
+# batch_size = 32
 
-for epoch in range(1, 5):
-    for start in range(0, len(train_X), batch_size):
-        end = min(start + batch_size, len(train_X))
+# for epoch in range(1, 5):
+#     for start in range(0, len(train_X), batch_size):
+#         end = min(start + batch_size, len(train_X))
 
-        preds = [mlp(x.flatten() / 255.0) for x in train_X[start:end]]
-        batch_labels = train_y[start:end]
+#         preds = [mlp(x.flatten() / 255.0) for x in train_X[start:end]]
+#         batch_labels = train_y[start:end]
 
-        loss = cse(preds, batch_labels)
+#         loss = cse(preds, batch_labels)
 
-        mlp.zero_grad()
-        loss.backward()
+#         mlp.zero_grad()
+#         loss.backward()
 
 
-        # for param in mlp.parameters():
-        #     param.data = param.data - 0.01 * param.grad
+#         # for param in mlp.parameters():
+#         #     param.data = param.data - 0.01 * param.grad
 
-        adam.step()
+#         adam.step()
 
-        if start % 6400 == 0:
-            print(f"Epoch {epoch}, step {start // batch_size}: Loss={loss.data:.4f}")
+#         if start % 6400 == 0:
+#             print(f"Epoch {epoch}, step {start // batch_size}: Loss={loss.data:.4f}")
 
-    scheduler.step()
+#     scheduler.step()
 #FROM 7.8 to 0.12
 
 #=============MLP TEST======================
