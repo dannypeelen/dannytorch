@@ -1,5 +1,5 @@
 import nn.nn as nn
-import dt.lang as lang
+# import dt.lang as lang
 import numpy as np
 
 """
@@ -22,6 +22,7 @@ class MultiheadAttention(nn.Module):
         self.attn_dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        size, seq_len, _ = x.shape
         pass
 
 class TransformerBlock(nn.Module):

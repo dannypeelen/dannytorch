@@ -1,5 +1,3 @@
-backward passes for tensorOps
-
 build Embedding forward, wrap Dropout & LayerNorm
 
 build nn.Sequential type thing? then see w ModuleList, build for llm

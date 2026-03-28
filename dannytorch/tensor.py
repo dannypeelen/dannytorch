@@ -140,31 +140,37 @@ class tensor:
     #=============Tensor Operations===============
 
     def squeeze(self, dim=0):
-        out =  tensor(np.squeeze(self.data, dim=dim), (self,), self.requires_grad) #sorry i'm lame, this could way cooler than a wrapper
-        
-        def _backward():
-            pass
-        out._backward = _backward
+        out = tensor(np.squeeze(self.data, axis=dim), (self,), self.requires_grad)
 
+        def _backward():
+            if not self.requires_grad:
+                return
+            self.grad += np.expand_dims(out.grad, axis=dim)
+        out._backward = _backward
 
         return out
         #new_shape = [d for d in self.shape if d != 1]
         #return self.data.reshape(new_shape)
 
     def unsqueeze(self, dim=0):
-        out = tensor(np.expand_dims(self.data, dim=dim), (self,), self.requires_grad)
+        out = tensor(np.expand_dims(self.data, axis=dim), (self,), self.requires_grad)
 
         def _backward():
-            pass
+            if not self.requires_grad:
+                return
+            self.grad += np.squeeze(out.grad, axis=dim)
         out._backward = _backward
 
         return out
 
     def reshape(self, shape):
+        orig_shape = self.data.shape
         out = tensor(np.reshape(self.data, shape), (self,), self.requires_grad)
 
         def _backward():
-            pass
+            if not self.requires_grad:
+                return
+            self.grad += np.reshape(out.grad, orig_shape)
         out._backward = _backward
 
         return out
@@ -173,7 +179,10 @@ class tensor:
         out = tensor(np.transpose(self.data, axes=axes), (self,), self.requires_grad)
 
         def _backward():
-            pass
+            if not self.requires_grad:
+                return
+            inv_axes = np.argsort(axes) if axes is not None else None
+            self.grad += np.transpose(out.grad, axes=inv_axes)
         out._backward = _backward
 
         return out
@@ -228,3 +237,4 @@ class rand(tensor):
 
     def __init__(self, shape=1, requires_grad=True, _children=None):
         super().__init__(np.random.uniform(-1, 1, size=shape), requires_grad, _children)
+
