@@ -2,30 +2,115 @@ from dannytorch.tensor import tensor, rand
 import numpy as np
 from typing import OrderedDict
 
+class Parameter:
+
+    def __init__(self, data=None):
+        self.data = data
+        self.grad = np.zeros_like(data)
+
+    def zero_grad(self):
+        self.grad = np.zeros_like(self.data)
+
+    def __repr__(self):
+        return f"Parameter({self.data})"
+
+
 class Module:
 
     def __init__(self):
-        self._module = []
+        self.training = True
+        object.__setattr__(self, '_parameters', {})
+        object.__setattr__(self, '_modules', {})
+
+    def __setattr__(self, name, value):
+        if isinstance(value, Parameter):
+            self._parameters[name] = value
+        elif isinstance(value, Module):
+            self._modules[name] = value
+        else:
+            object.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        if name in self._parameters:
+            return self._parameters[name]
+        if name in self._modules:
+            return self._modules[name]
+        raise AttributeError(f"No attribute found '{name}")
+
+    def train(self, mode=True):
+        self.training = mode
+        for val in vars(self).values():
+            if isinstance(val, Module):
+                val.train(mode)
+            elif isinstance(val, list):
+                for item in val:
+                    if isinstance(item, Module):
+                        item.train(mode)
+
+        return self
+
+    def eval(self):
+        return self.train(False) #recursion hehehee
 
     def zero_grad(self):
         for p in self.parameters():
-            p.grad = np.zeros_like(p.data)
+            p.zero_grad()
 
     def parameters(self):
-        return []
+        yield from self._parameters.values()
+
+        for module in self._modules.values():
+            yield from module.parameters()
     
     def add_module(self, module):
         self._module.append(module)
 
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def __call__(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
+
+
+class ModuleList(Module):
+
+    def __init__(self, modules=None):
+        super().__init__()
+        self.modules = modules or []
+
+    def __iter__(self):
+        return iter(self.modules)
+    
+    def __getitem__(self, idx):
+        return self.modules[idx]
+    
+    def __len__(self):
+        return len(self.modules)
+
+    def append(self, module):
+        self.modules.append(module)
+
+    def extend(self, module_list):
+        self.modules.extend(module_list)
+
+    def parameters(self): 
+        return [m.parameters() for m in self.modules]
+    
+    def train(self, mode=True):
+        self.training = mode
+        for module in self.modules:
+            module.train(mode)
+
+        return self
 
 class Embedding(Module): #padding_idx is a thing
 
     def __init__(self, n_embeddings, embedding_dim):
         self.embedding = np.random.randn(n_embeddings, embedding_dim)
 
-    #TODO: figure this out
-    def forward(self, input):
-        return self.weigh
+    def forward(self, input): 
+        return self.embedding[input]
+    
 
 class Linear(Module):
 
@@ -38,7 +123,7 @@ class Linear(Module):
         self.b = tensor([0 for _ in range(nout)])
         self.activation = activation
         
-    def __call__(self, x):
+    def forward(self, x):
         x = x if isinstance(x, tensor) else tensor(x)
         out  = x @ self.w + self.b
         if self.activation == 'relu': out = out.relu() 
@@ -57,7 +142,7 @@ class MLP(Module):
 
     def __init__(self, nin, nouts:list, activation='relu', init='He', dropout=0.0):
         sz = [nin] + nouts
-        self.layers = [Linear(sz[i], sz[i+1], activation= activation, init=init if i!=len(nouts)-1 else 'none') for i in range(len(nouts))]
+        self.layers = ModuleList([Linear(sz[i], sz[i+1], activation= activation, init=init if i!=len(nouts)-1 else 'none') for i in range(len(nouts))])
         self.dropout = Dropout(dropout) if dropout > 0 else None
 
     def __call__(self, x, training=True):  
@@ -124,16 +209,27 @@ class CrossEntropyLoss:
 class Dropout(Module): #for training, but not for inference! TODO: make sure this is good w/ Module
     
     def __init__(self, p=0.5):
+        super().__init__()
         self.p = p
         self.mask = None
         
-    def __call__(self, x, training=True):
-        if not training:
+    def forward(self, x):
+        if not self.training:
             return x
         
         self.mask = np.random.rand(*x.shape) > self.p #might need .astype(float)
-        return x * self.mask / (1-self.p)
-    
+        #we need a backward pass?
+        out =  tensor(x * self.mask / (1-self.p))
+
+        def backward():
+            pass
+        out._backward = backward
+
+        return out
+
+    def parameters(self):
+        return
+
 class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with autograd
     
     def __init__(self, features, eps=1e-5):
@@ -143,12 +239,14 @@ class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with a
         self.beta = 0 #^
 
     def forward(self, x):  
-        mean = x.mean()
-        var = x.var()
+        mean = x.data.mean()
+        var = x.data.var()
         return self.gamma * (x-mean) / np.sqrt(var+self.eps) + self.beta
 
-        
-        
+    def parameters(self):
+        return
+
+#not needed right now     
 class RMSNorm:
     
     def __init__(self):
@@ -190,10 +288,9 @@ def ReLU(input):
     return input.relu()
 
 #not sure how useful this is, plus silu incomplete
-class SwiGLU(Module):
+class SwiGLU:
     
     def __init__(self, nin, nout):
-        super().__init__()
         self.w1 = Linear(nin, nout)
         self.w2 = Linear(nin, nout)
 

@@ -1,4 +1,4 @@
-build Embedding forward, wrap Dropout & LayerNorm
+build Embedding forward, wrap Dropout & LayerNorm, Module robustness (train, eval modes)
 
 build nn.Sequential type thing? then see w ModuleList, build for llm
 

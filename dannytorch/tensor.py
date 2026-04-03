@@ -177,7 +177,8 @@ class tensor:
 
     def transpose(self, axes=None):
         out = tensor(np.transpose(self.data, axes=axes), (self,), self.requires_grad)
-
+        self.T = out
+        
         def _backward():
             if not self.requires_grad:
                 return

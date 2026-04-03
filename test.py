@@ -1,19 +1,51 @@
 import dannytorch as dt
 import dannytorch.nn as nn
 import dannytorch.optim as optim
+import dannytorch.llm as llm
 import dannytorch.optim.scheduler as scheduler
+
 from datasets import load_dataset
+import tiktoken, tqdm
+from dataclasses import dataclass
+
+@dataclass
+class Config: 
+    vocab_size=50257,
+    d_model=256,
+    n_heads=4,
+    n_layers=4,
+    context_length=128,
+    warmup_steps=200
 
 #================LLM TEST=====================
 
-#use cosmopedia-100k?
-
-#load dataset
+#load & prepare dataset
 ds = load_dataset("HuggingFaceTB/cosmopedia-100k", split="train")
-print(ds)
+
+
+#get config right
+model = llm.LLM() #add configs
+tokenizer = tiktoken("gpt2")
+config = Config()
+
+
+
 #things to remember:
 # - good balance of num_epochs and epoch size
 # - keep "prompt", "text" sections
+
+for epoch in range(1, 26):
+    model.train()
+    epoch_loss = 0.0
+    bar = tqdm()
+
+    for batch in tqdm:
+        pass
+
+    
+
+    model.eval()
+
 
 # #=============MNIST TEST====================
 # import kagglehub
