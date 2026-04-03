@@ -219,10 +219,10 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
         
         self.mask = np.random.rand(*x.shape) > self.p #might need .astype(float)
         #we need a backward pass?
-        out =  tensor(x * self.mask / (1-self.p))
+        out =  tensor(x.data * self.mask / (1-self.p))
 
         def backward():
-            pass
+            x.grad += out.grad * self.mask / (1-self.p)
         out._backward = backward
 
         return out
@@ -233,15 +233,21 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
 class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with autograd
     
     def __init__(self, features, eps=1e-5):
-        # super().__init__()
+        super().__init__()
         self.eps = eps
-        self.gamma = 0 #this has to be nn.Paramter, worth building?
-        self.beta = 0 #^
+        self.gamma = Parameter(np.ones(features)) 
+        self.beta = Parameter(np.zeros(features)) 
 
     def forward(self, x):  
         mean = x.data.mean()
         var = x.data.var()
-        return self.gamma * (x-mean) / np.sqrt(var+self.eps) + self.beta
+        out = tensor(self.gamma * (x-mean) / np.sqrt(var+self.eps) + self.beta, (self,))
+
+        def backward():
+            pass
+        out._backward = backward
+
+        return out
 
     def parameters(self):
         return
@@ -299,4 +305,4 @@ class SwiGLU:
 
 
 def sigmoid(input):
-    pass
+    return input.sigmoid()
