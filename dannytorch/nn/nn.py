@@ -61,9 +61,6 @@ class Module:
 
         for module in self._modules.values():
             yield from module.parameters()
-    
-    def add_module(self, module):
-        self._module.append(module)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError
@@ -87,6 +84,9 @@ class ModuleList(Module):
     def __len__(self):
         return len(self.modules)
 
+    def add_module(self, module):
+        self._modules.append(module)
+
     def append(self, module):
         self.modules.append(module)
 
@@ -106,10 +106,17 @@ class ModuleList(Module):
 class Embedding(Module): #padding_idx is a thing
 
     def __init__(self, n_embeddings, embedding_dim):
-        self.embedding = np.random.randn(n_embeddings, embedding_dim)
+        super().__init__()
+        self.embedding = Parameter(np.random.randn(n_embeddings, embedding_dim))
 
     def forward(self, input): 
-        return self.embedding[input]
+        out = tensor(self.embedding[input], (self,))
+
+        def _backward():
+            np.add.at(self.weight.grad, input, out.grad)
+        out._backward = _backward
+
+        return out
     
 
 class Linear(Module):
@@ -127,7 +134,7 @@ class Linear(Module):
         x = x if isinstance(x, tensor) else tensor(x)
         out  = x @ self.w + self.b
         if self.activation == 'relu': out = out.relu() 
-        if self.activation == 'gelu': out = out.gelu() #build into tensor
+        if self.activation == 'gelu': out = out.gelu()
 
 
         return out
@@ -227,9 +234,6 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
 
         return out
 
-    def parameters(self):
-        return
-
 class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with autograd
     
     def __init__(self, features, eps=1e-5):
@@ -239,15 +243,10 @@ class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with a
         self.beta = Parameter(np.zeros(features)) 
 
     def forward(self, x):  
-        mean = x.data.mean()
-        var = x.data.var()
-        out = tensor(self.gamma * (x-mean) / np.sqrt(var+self.eps) + self.beta, (self,))
-
-        def backward():
-            pass
-        out._backward = backward
-
-        return out
+        mean = x.mean(axis=-1, keepdims=True)
+        var = ((x-mean) ** 2).mean(axis=-1, keepdims=True)
+        x_hat = (x-mean) / (var+self.eps) ** 0.5
+        return tensor(self.gamma.data) * x_hat + tensor(self.beta.data)
 
     def parameters(self):
         return
@@ -261,6 +260,7 @@ class RMSNorm:
 class Sequential(Module):
 
     def __init__(self, *args):
+        super().__init__()
         if isinstance(args[0], OrderedDict):
             for key, module in args[0].items():
                 self.add_module(key, module)
@@ -269,7 +269,7 @@ class Sequential(Module):
                 self.add_module(str(idx), module)
 
     def __iter__(self):
-        pass
+        return iter(self._modules)
         
     def forward(self, x):
         
@@ -280,7 +280,11 @@ class Sequential(Module):
     def append(self, module: Module):
         self.add_module(str(len(self)), module)
         return self
-    
+
+    def add_module(self, module):
+        self._modules.append(module)
+
+
     def insert(self, idx, module:Module):
         pass
     

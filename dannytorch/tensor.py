@@ -68,6 +68,18 @@ class tensor:
 
         return out
     
+    def mean(self, axis=None, keepdims=False):
+        out = tensor(self.data.mean(axis=axis, keepdims=keepdims), (self,), self.requires_grad)
+
+        def backward():
+            if not self.requires_grad:
+                return
+            n = self.data[..., :].size / out.data.size
+            self.grad += np.ones_like(self.data) * out.grad / n
+        out._backward = backward
+
+        return out
+    
     #=======activation functions==========
     def relu(self):
         out = tensor(np.maximum(0, self.data), (self,))
