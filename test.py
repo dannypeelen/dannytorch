@@ -1,50 +1,71 @@
 import dannytorch as dt
-import dannytorch.nn as nn
-import dannytorch.optim as optim
 import dannytorch.llm as llm
+import dannytorch.optim as optim
 import dannytorch.optim.scheduler as scheduler
-
-from datasets import load_dataset
-import tiktoken, tqdm
-from dataclasses import dataclass
-
-@dataclass
-class Config: 
-    vocab_size=50257,
-    d_model=256,
-    n_heads=4,
-    n_layers=4,
-    context_length=128,
-    warmup_steps=200
+import dannytorch.nn as nn
+import numpy as np
 
 #================LLM TEST=====================
+CORPUS = """
+It was the best of times, it was the worst of times, it was the age of wisdom,
+it was the age of foolishness, it was the epoch of belief, it was the epoch of
+incredulity, it was the season of Light, it was the season of Darkness, it was
+the spring of hope, it was the winter of despair, we had everything before us,
+we had nothing before us, we were all going direct to Heaven, we were all going
+direct the other way. To be, or not to be, that is the question: whether 'tis
+nobler in the mind to suffer the slings and arrows of outrageous fortune, or to
+take arms against a sea of troubles and by opposing end them. It is a truth
+universally acknowledged that a single man in possession of a good fortune must
+be in want of a wife. Call me Ishmael. Some years ago, never mind how long
+precisely, having little money in my pocket and nothing particular to interest
+me on shore, I thought I would sail about a little and see the watery part of
+the world. In the beginning God created the heavens and the earth, and the earth
+was without form and void, and darkness was upon the face of the deep.
+"""
 
-#load & prepare dataset
-ds = load_dataset("HuggingFaceTB/cosmopedia-100k", split="train")
+CONTEXT = 16
+EPOCHS  = 500
 
+chars = sorted(set(CORPUS))
+ctoi  = {c: i for i, c in enumerate(chars)}
+itoc  = {i: c for c, i in ctoi.items()}
+V     = len(chars)
+data  = [ctoi[c] for c in CORPUS]
+pairs = [(data[i:i+CONTEXT], data[i+CONTEXT]) for i in range(len(data)-CONTEXT)]
 
-#get config right
-model = llm.LLM() #add configs
-tokenizer = tiktoken("gpt2")
-config = Config()
+model   = llm.Transformer(vocab_size=V, d_model=64, n_heads=4, n_blocks=2, max_seq_len=CONTEXT)
+opt     = optim.Adam(model.parameters(), lr=1e-3)
+sched   = scheduler.CosineAnnealingLR(opt, EPOCHS)
+loss_fn = nn.CrossEntropyLoss()
 
+def last_logit(out):
+    t = dt.tensor(out.data[0, -1, :].copy(), (out,))
+    def _bwd(): out.grad[0, -1, :] += t.grad
+    t._backward = _bwd
+    return t
 
+def sample(seed="It was", n=80):
+    ctx = ([0]*(CONTEXT-len(seed)) + [ctoi.get(c,0) for c in seed])[-CONTEXT:]
+    out = list(seed)
+    for _ in range(n):
+        lg = last_logit(model(dt.tensor(np.array([ctx]), requires_grad=False)))
+        p  = np.exp(lg.data - lg.data.max()); p /= p.sum()
+        nxt = np.random.choice(V, p=p)
+        out.append(itoc[nxt]); ctx = ctx[1:] + [nxt]
+    return "".join(out)
 
-#things to remember:
-# - good balance of num_epochs and epoch size
-# - keep "prompt", "text" sections
+print(f"vocab={V}  pairs={len(pairs)}  ctx={CONTEXT}  epochs={EPOCHS}\n")
+print(f"[ep   0] init | {sample()!r}\n")
 
-for epoch in range(1, 26):
-    model.train()
-    epoch_loss = 0.0
-    bar = tqdm()
-
-    for batch in tqdm:
-        pass
-
-    
-
-    model.eval()
+for ep in range(1, EPOCHS+1):
+    np.random.shuffle(pairs); epoch_loss = 0.0
+    for xs, y in pairs:
+        pred = last_logit(model(dt.tensor(np.array([xs]), requires_grad=False)))
+        loss = loss_fn([pred], [y])
+        model.zero_grad(); loss.backward(); sched.step()
+        epoch_loss += float(loss.data)
+    if ep % 50 == 0:
+        print(f"[ep {ep:3d}] loss {epoch_loss/len(pairs):.4f} | {sample()!r}")
 
 
 # #=============MNIST TEST====================

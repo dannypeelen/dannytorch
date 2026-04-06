@@ -1,10 +1,10 @@
-build Embedding forward, wrap Dropout & LayerNorm, Module robustness (train, eval modes)
+fix layerNorm params, and chunk, cat, view? sum & exp too
+Linear should have Parameter objects
+add multiple dimension handling for matmul
+check no PyTorch stuff in RoPE
+masked_fill?
 
-build nn.Sequential type thing? then see w ModuleList, build for llm
-
-Attention MHA!!
-
-build RoPE
+build MHA & RoPE
 
 Test: Build LLM & NestedLLM (include) <- dt.llm
 

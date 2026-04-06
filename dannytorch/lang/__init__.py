@@ -1,9 +1,8 @@
 #this is some big boy math
-__all__ = [
-    
-]
-class RoPE:
+from .lang import rope
 
-    def __init__(self):
-        pass
+__all__ = [
+    'rope'
+]
+
 

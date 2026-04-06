@@ -1,5 +1,5 @@
-import nn.nn as nn
-# import dt.lang as lang
+import dannytorch.nn as nn
+import dannytorch.lang as lang
 import numpy as np
 
 """
@@ -16,14 +16,40 @@ class MultiheadAttention(nn.Module):
         assert self.head_dim % 2 == 0, "head_dim must be even for RoPE"
 
         #need some projections here
+        self.qkv_proj  = nn.Linear(d_model, 3*d_model)
+        self.o_proj = nn.Linear(3*d_model, d_model)
 
         self.use_rope = use_rope
         self.pos_enc = lang.positional_encoding() 
         self.attn_dropout = nn.Dropout(dropout)
+        self.batch_first = batch_first
 
     def forward(self, x):
-        size, seq_len, _ = x.shape
-        pass
+        size, seq_len, _ = x.shape #(N, L, E_q)
+
+        qkv = self.qkv_proj(x)
+        q,k,v = 0,0,0#split this into thirds, dim=-1  
+
+        if self.use_rope:
+            cos, sin = self.pos_enc(seq_len) #optional device
+            q, k = 0,0#apply rope?
+
+
+        q = q.transpose(1, 2)
+        v = v.transpose(1, 2)
+        k = k.transpose(1, 2)
+
+        out = (q @ k.transpose(-2, -1)) / np.sqrt(self.head_dim)
+        #mask
+        #update scores w mask
+        #softmax
+        #dropout
+        #attention times v -> out
+
+        #configure out matrix
+
+        return self.o_proj(out)
+
 
 class TransformerBlock(nn.Module):
 

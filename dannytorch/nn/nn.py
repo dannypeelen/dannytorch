@@ -5,7 +5,7 @@ from typing import OrderedDict
 class Parameter:
 
     def __init__(self, data=None):
-        self.data = data
+        self.data = tensor(data)
         self.grad = np.zeros_like(data)
 
     def zero_grad(self):
@@ -13,7 +13,6 @@ class Parameter:
 
     def __repr__(self):
         return f"Parameter({self.data})"
-
 
 class Module:
 
@@ -117,6 +116,9 @@ class Embedding(Module): #padding_idx is a thing
         out._backward = _backward
 
         return out
+
+    def parameters(self):
+        return super().parameters()
     
 
 class Linear(Module):
@@ -127,7 +129,7 @@ class Linear(Module):
         self.init = init
         if self.init == 'He': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin)) 
         if self.init == 'Xavier': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(6.0 / (nin + nout)))
-        self.b = tensor([0 for _ in range(nout)])
+        self.b = Parameter([0 for _ in range(nout)])
         self.activation = activation
         
     def forward(self, x):

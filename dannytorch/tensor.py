@@ -68,6 +68,13 @@ class tensor:
 
         return out
     
+    #TODO: sum and exp needed here
+    def sum(self):
+        pass
+
+    def __exp__(self):
+        pass
+    
     def mean(self, axis=None, keepdims=False):
         out = tensor(self.data.mean(axis=axis, keepdims=keepdims), (self,), self.requires_grad)
 
@@ -199,7 +206,14 @@ class tensor:
         out._backward = _backward
 
         return out
+    
+    def chunk(self, x, dim=-1):
+        pass
 
+    def cat(self, x):
+        pass
+
+    #NEED HERE .cat and .chunk, maybe a .view??
     #=============End of TensorOps=================
 
 
