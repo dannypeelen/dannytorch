@@ -109,7 +109,7 @@ class Embedding(Module): #padding_idx is a thing
         self.embedding = Parameter(np.random.randn(n_embeddings, embedding_dim))
 
     def forward(self, input): 
-        out = tensor(self.embedding[input], (self,))
+        out = tensor(self.embedding[input].data, (self,))
 
         def _backward():
             np.add.at(self.weight.grad, input, out.grad)
@@ -137,7 +137,6 @@ class Linear(Module):
         out  = x @ self.w + self.b
         if self.activation == 'relu': out = out.relu() 
         if self.activation == 'gelu': out = out.gelu()
-
 
         return out
     
@@ -236,7 +235,7 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
 
         return out
 
-class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with autograd
+class LayerNorm(Module):
     
     def __init__(self, features, eps=1e-5):
         super().__init__()
@@ -248,16 +247,11 @@ class LayerNorm(Module): #TODO: check, see how to do mean and var, fit in with a
         mean = x.mean(axis=-1, keepdims=True)
         var = ((x-mean) ** 2).mean(axis=-1, keepdims=True)
         x_hat = (x-mean) / (var+self.eps) ** 0.5
-        return tensor(self.gamma.data) * x_hat + tensor(self.beta.data)
-
-    def parameters(self):
-        return
-
-#not needed right now     
-class RMSNorm:
+        return self.gamma.data * x_hat + self.beta.data
     
-    def __init__(self):
-        pass
+    def parameters(self):
+        yield from self.gamma
+        yield from self.beta
     
 class Sequential(Module):
 

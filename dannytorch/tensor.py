@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List
 
 class tensor:
 
@@ -62,18 +63,53 @@ class tensor:
         def _backward():
             if not self.requires_grad:
                 return
-            self.grad += out.grad @ other.data.T
-            other.grad += np.atleast_2d(self.data).T @ np.atleast_2d(out.grad)
+            
+            grad_self = np.matmul(out.grad, np.swapaxes(other.data, -1, -2))
+            grad_other = np.matmul(np.swapaxes(self.data, -1, -2), out.grad)
+            
+            #broadcast reductions
+            while grad_self.ndim > self.data.ndim:
+                grad_self = grad_self.sum(axis=0)
+            while grad_other.ndim > self.data.ndim:
+                grad_other = grad_other.sum(axis=0)
+                
+            self.grad += grad_self
+            other.grad += grad_other
+                
+            #=======2D ONLY VERSION========
+            # self.grad += out.grad @ other.data.T
+            # other.grad += np.atleast_2d(self.data).T @ np.atleast_2d(out.grad)
+            
         out._backward = _backward
 
         return out
     
-    #TODO: sum and exp needed here
-    def sum(self):
-        pass
+    def sum(self, axis=None, keepdims=False):
+        out = tensor(np.sum(self.data, axis=axis, keepdims=keepdims), (self,), requires_grad=self.requires_grad)
 
-    def __exp__(self):
-        pass
+        def _backward():
+            if not self.requires_grad:
+                return
+            
+            grad = out.grad
+            
+            if not keepdims and axis is not None:
+                grad = np.expand_dims(grad, axis=axis)
+            self.grad += np.broadcast_to(grad, self.data.shape)
+
+        out._backward = _backward
+        return out
+
+    def exp(self):
+        out = tensor(np.exp(self.data), (self,), requires_grad=self.requires_grad)
+        def _backward():
+            if not self.requires_grad:
+                return
+
+            self.grad += np.exp(self.data) * out.grad
+
+        out._backward = _backward
+        return out
     
     def mean(self, axis=None, keepdims=False):
         out = tensor(self.data.mean(axis=axis, keepdims=keepdims), (self,), self.requires_grad)
@@ -207,13 +243,42 @@ class tensor:
 
         return out
     
-    def chunk(self, x, dim=-1):
-        pass
+    def chunk(self, chunks=2, axis=0):
+        chunks = np.array_split(self.data, chunks, axis=axis)
+        out = []
+        
+        for i, val in enumerate(chunks):
+            chunk = tensor(val, (self,), requires_grad=self.requires_grad)
+            start = sum(s.shape[axis] for s in chunks[:i])
+            end = start + val.shape[axis]
 
-    def cat(self, x):
-        pass
+            def _backward(idx=i, s=start, e=end):
+                if not self.requires_grad:
+                    return
+                
+                slices = [slice(None)] * self.data.ndim
+                slices[axis] = slice(s, e)
+                self.grad[tuple(slices)] += chunk.grad
+                pass
+            
+            chunk._backward = _backward
+            out.append(chunk)
 
-    #NEED HERE .cat and .chunk, maybe a .view??
+        return out
+
+    def cat(self, tensors: List, axis=0):
+        out = tensor(np.concatenate([t.data for t in tensors], axis=axis), (self,), requires_grad=self.requires_grad)
+
+        def _backward():
+            if not self.requires_grad:
+                return
+            
+            for t in tensors:
+                t.grad += out.grad
+        out._backward = _backward
+
+        return out
+
     #=============End of TensorOps=================
 
 

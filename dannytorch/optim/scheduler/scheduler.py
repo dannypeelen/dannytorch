@@ -23,7 +23,6 @@ class ExponentialLR(StepLR):
         self.last_epoch += 1
         self.optimizer.lr = self.initial_lr * self.gamma ** self.last_epoch
 
-#TODO: implement this formula
 class CosineAnnealingLR:
     
     def __init__(self, optimizer, t_max, eta_min=0):

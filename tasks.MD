@@ -1,16 +1,11 @@
-fix layerNorm params, and chunk, cat, view? sum & exp too
-Linear should have Parameter objects
-add multiple dimension handling for matmul
 check no PyTorch stuff in RoPE
 masked_fill?
 
-build MHA & RoPE
+build MHA
 
 Test: Build LLM & NestedLLM (include) <- dt.llm
 
 PUBLISH!----------------------------
-
-maybe add a .train() and .eval() for models
 
 maybe go for GQA, Flash/Flex Attention (this might need kernels)
 
@@ -23,12 +18,12 @@ have a crack at JAX's implementation of autograd?
 
 ---------STATUS--------
 
-Tensor: build tensorOps back passes
+TensorOps: DONE
 
-Optimizer/Scheduler: Do cosine_annealing
+Optimizer/Scheduler: DONE
 
 Activations:  DONE
 
-nn: Embedding Forward, Parameter class, make robust!!
+nn: bug sweep
 
 LLM: MHA, RoPE
