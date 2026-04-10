@@ -267,7 +267,7 @@ class tensor:
         return out
 
     def cat(self, tensors: List, axis=0):
-        out = tensor(np.concatenate([t.data for t in tensors], axis=axis), (self,), requires_grad=self.requires_grad)
+        out = tensor(np.concatenate([self.data] + [t.data for t in tensors], axis=axis), (self,), self.requires_grad)
 
         def _backward():
             if not self.requires_grad:
@@ -277,6 +277,18 @@ class tensor:
                 t.grad += out.grad
         out._backward = _backward
 
+        return out
+    
+    def masked_fill(self, mask, fill_val=-np.inf):
+        out = tensor(np.where(mask, fill_val, self.data), (self,), self.requires_grad)
+        
+        def _backward():
+            if not self.requires_grad:
+                return
+            
+            self.grad += np.where(mask, 0, out.grad)
+            
+        out._backward = _backward
         return out
 
     #=============End of TensorOps=================

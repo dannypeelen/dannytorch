@@ -93,7 +93,8 @@ class ModuleList(Module):
         self.modules.extend(module_list)
 
     def parameters(self): 
-        return [m.parameters() for m in self.modules]
+        for m in self.modules:
+            yield from m.parameters() 
     
     def train(self, mode=True):
         self.training = mode
@@ -109,7 +110,7 @@ class Embedding(Module): #padding_idx is a thing
         self.embedding = Parameter(np.random.randn(n_embeddings, embedding_dim))
 
     def forward(self, input): 
-        out = tensor(self.embedding[input].data, (self,))
+        out = tensor(self.embedding.data.data[input], (self,))
 
         def _backward():
             np.add.at(self.weight.grad, input, out.grad)
@@ -126,6 +127,7 @@ class Linear(Module):
     #He best for relu networks
     def __init__(self, nin, nout, activation='relu', init='He'): #only alternate is Xavier, TODO: build in normal vs uniform
         # self.nodes = [Node(nin, **kwargs) for _ in range(nout)]
+        super().__init__()
         self.init = init
         if self.init == 'He': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin)) 
         if self.init == 'Xavier': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(6.0 / (nin + nout)))
@@ -250,8 +252,8 @@ class LayerNorm(Module):
         return self.gamma.data * x_hat + self.beta.data
     
     def parameters(self):
-        yield from self.gamma
-        yield from self.beta
+        yield self.gamma
+        yield self.beta
     
 class Sequential(Module):
 
@@ -265,7 +267,7 @@ class Sequential(Module):
                 self.add_module(str(idx), module)
 
     def __iter__(self):
-        return iter(self._modules)
+        return iter(self._modules.values())
         
     def forward(self, x):
         
