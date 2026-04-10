@@ -1,6 +1,8 @@
 from dannytorch.optim.scheduler.scheduler import StepLR
 import numpy as np
 
+#need to add gradient clipping?
+
 class Adam:
 
     def __init__(self, params,  lr: float = 0.01, betas=[0.9, 0.999]):
@@ -62,6 +64,5 @@ class SGD:
                 self.velocities[i] = self.momentum * self.velocities[i] - self.lr * param.grad
                 param.data = param.data + self.velocities[i]
         else:
-            print('here')
             for param in self.params:
                 param.data = param.data - (self.lr * param.grad)

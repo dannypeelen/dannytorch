@@ -1,4 +1,4 @@
-import dannytorch.nn as nn
+import dannytorch.nn.nn as nn
 import dannytorch.lang as lang
 import numpy as np
 

@@ -6,10 +6,10 @@ class Parameter:
 
     def __init__(self, data=None):
         self.data = tensor(data)
-        self.grad = np.zeros_like(data)
+        self.grad = tensor(np.zeros_like(data), (self,))
 
     def zero_grad(self):
-        self.grad = np.zeros_like(self.data)
+        self.grad = tensor(np.zeros_like(self.data))
 
     def __repr__(self):
         return f"Parameter({self.data})"
@@ -113,7 +113,7 @@ class Embedding(Module): #padding_idx is a thing
         out = tensor(self.embedding.data.data[input], (self,))
 
         def _backward():
-            np.add.at(self.weight.grad, input, out.grad)
+            np.add.at(self.embedding.grad, input, out.grad)
         out._backward = _backward
 
         return out
@@ -129,8 +129,8 @@ class Linear(Module):
         # self.nodes = [Node(nin, **kwargs) for _ in range(nout)]
         super().__init__()
         self.init = init
-        if self.init == 'He': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin)) 
-        if self.init == 'Xavier': self.w = tensor(np.random.randn(nin, nout) * np.sqrt(6.0 / (nin + nout)))
+        if self.init == 'He': self.w = Parameter(tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin)) )
+        if self.init == 'Xavier': self.w = Parameter(tensor(np.random.randn(nin, nout) * np.sqrt(6.0 / (nin + nout))))
         self.b = Parameter([0 for _ in range(nout)])
         self.activation = activation
         
@@ -279,8 +279,11 @@ class Sequential(Module):
         self.add_module(str(len(self)), module)
         return self
 
-    def add_module(self, module):
-        self._modules.append(module)
+    def add_module(self, key, module):
+        if key in self._modules:
+            self._modules[key].append(module)
+        else:
+            self._modules[key] = [module]
 
 
     def insert(self, idx, module:Module):
@@ -292,8 +295,9 @@ class Sequential(Module):
             self.append(layer)
         return self
     
-def ReLU(input):
-    return input.relu()
+class ReLU(Module):
+    def forward(self, x):
+        return x.relu()
 
 #not sure how useful this is, plus silu incomplete
 class SwiGLU:

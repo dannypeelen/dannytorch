@@ -10,7 +10,7 @@ class tensor:
         self._backward = lambda: None
         self.requires_grad = requires_grad
         self._prev = set(_children)
-        self. T = self.transpose()
+        self.T = np.transpose(np.array(data))
 
     def __str__(self):
         return f"Tensor(Data:{self.data} grad:{self.grad})"
@@ -340,5 +340,5 @@ class tensor:
 class rand(tensor):
 
     def __init__(self, shape=1, requires_grad=True, _children=None):
-        super().__init__(np.random.uniform(-1, 1, size=shape), requires_grad, _children)
+        super().__init__(np.random.uniform(-1, 1, size=shape), _children, requires_grad)
 

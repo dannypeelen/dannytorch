@@ -6,18 +6,18 @@ class rope(Module):
     def __init__(self, dim, seq_len=256):
         super().__init__()
         N = 10000
-        inv_freq = 1 / (N ** (np.arange(0, dim, 2).float() / dim))
+        inv_freq = 1 / (N ** (np.arange(0, dim, 2).astype(float) / dim))
         position = np.arange(seq_len).astype(float)
         sinusoid = np.outer(position, inv_freq)
-        self.register_buffer("cos", sinusoid.cos())
-        self.register_buffer("sin", sinusoid.sin())
+        self.cos_cache = np.cos(sinusoid)
+        self.sin_cache = np.sin(sinusoid)
 
     def forward(self, x, seq_len=None):
         if seq_len is None:
             seq_len = x.shape[1]
 
-        cos = self.cos[:seq_len].reshape(1, seq_len, 1, -1)
-        sin = self.sin[:seq_len].reshape(1, seq_len, 1, -1)
+        cos = self.cos_cache[:seq_len].reshape(1, seq_len, 1, -1)
+        sin = self.sin_cache[:seq_len].reshape(1, seq_len, 1, -1)
         
         return self._apply_rope(x, cos, sin)
 
