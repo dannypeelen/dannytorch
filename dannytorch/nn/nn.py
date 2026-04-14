@@ -214,7 +214,7 @@ class CrossEntropyLoss:
             for logits, prob, y in zip(preds, probs_list, labels):
                 grad = prob.copy()
                 grad[int(y)] -= 1.0
-                logits.grad += (grad / len(preds)) * out.grad
+                logits.grad.data += (grad / len(preds)) * out.grad.data
 
         out._backward = _backward
 
@@ -250,10 +250,26 @@ class LayerNorm(Module):
         self.beta = Parameter(np.zeros(features)) 
 
     def forward(self, x):  
-        mean = x.mean(axis=-1, keepdims=True)
-        var = ((x-mean) ** 2).mean(axis=-1, keepdims=True)
-        x_hat = (x-mean) / (var+self.eps) ** 0.5
-        return self.gamma * x_hat + self.beta
+        x_data = x.data if isinstance(x.data, np.ndarray) else x.data.data
+        mean = x_data.mean(axis=-1, keepdims=True)
+        var = ((x_data - mean) ** 2).mean(axis=-1, keepdims=True)
+        x_hat = (x_data - mean) / np.sqrt(var + self.eps)
+
+        out = tensor(self.gamma.data.data * x_hat + self.beta.data.data, (x, self.gamma.data, self.beta.data))
+
+        def _backward():
+            N = x_data.shape[-1]
+            g = self.gamma.data.data
+            dy = out.grad.data
+            dx_hat = dy * g
+            dvar = (dx_hat * (x_data - mean) * -0.5 * (var + self.eps) ** -1.5).sum(axis=-1, keepdims=True)
+            dmean = (-dx_hat / np.sqrt(var + self.eps)).sum(axis=-1, keepdims=True) + dvar * (-2 * (x_data - mean)).mean(axis=-1, keepdims=True)
+            x.grad.data += dx_hat / np.sqrt(var + self.eps) + dvar * 2 * (x_data - mean) / N + dmean / N
+            self.gamma.grad.data += (dy * x_hat).sum(axis=tuple(range(dy.ndim - 1)))
+            self.beta.grad.data += dy.sum(axis=tuple(range(dy.ndim - 1)))
+        out._backward = _backward
+
+        return out
     
     def parameters(self):
         yield self.gamma
@@ -263,18 +279,16 @@ class Sequential(Module):
 
     def __init__(self, *args):
         super().__init__()
-        if isinstance(args[0], OrderedDict):
-            for key, module in args[0].items():
-                self.add_module(key, module)
-        elif isinstance(args[0], list):
-            for idx, module in enumerate(args[0]):
-                self.add_module(str(idx), module)
+        self._seq = []
+        if len(args) == 1 and isinstance(args[0], OrderedDict):
+            for module in args[0].values():
+                self._seq.append(module)
         else:
-            for idx, module in enumerate(args):
-                self.add_module(str(idx), module)
+            for module in args:
+                self._seq.append(module)
 
     def __iter__(self):
-        return iter(self._modules.values())
+        return iter(self._seq)
         
     def forward(self, x):
         
@@ -283,21 +297,18 @@ class Sequential(Module):
         return x
     
     def append(self, module: Module):
-        self.add_module(str(len(self)), module)
-        return self
-
-    def add_module(self, key, module):
-        self._modules[key] = module
-
+        self._seq.append(module)
 
     def insert(self, idx, module:Module):
-        pass
+        self._seq.insert(idx, module)
     
     def extend(self, other):
-        
         for layer in other:
-            self.append(layer)
-        return self
+            self._seq.append(other)
+    
+    def parameters(self):
+        for m in self._seq:
+            yield m.parameters()
     
 class ReLU(Module):
     def forward(self, x):
