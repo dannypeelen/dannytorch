@@ -2,14 +2,16 @@ from dannytorch.tensor import tensor, rand
 import numpy as np
 from typing import OrderedDict
 
-class Parameter:
+class Parameter(tensor):
 
     def __init__(self, data=None):
-        self.data = tensor(data)
-        self.grad = tensor(np.zeros_like(data), (self,))
+        super().__init__(data, requires_grad=True)
+        self.data = data if isinstance(data, tensor) else tensor(np.array(data, dtype=float))
+        self.grad = tensor(np.zeros_like(self.data.data))
+
 
     def zero_grad(self):
-        self.grad = tensor(np.zeros_like(self.data))
+        self.grad = np.zeros_like(self.data.data)
 
     def __repr__(self):
         return f"Parameter({self.data})"
@@ -34,7 +36,7 @@ class Module:
             return self._parameters[name]
         if name in self._modules:
             return self._modules[name]
-        raise AttributeError(f"No attribute found '{name}")
+        raise AttributeError(f"No attribute found '{name}'")
 
     def train(self, mode=True):
         self.training = mode
@@ -72,25 +74,22 @@ class ModuleList(Module):
 
     def __init__(self, modules=None):
         super().__init__()
-        self.modules = modules or []
+        self._module_list = modules or []
 
     def __iter__(self):
-        return iter(self.modules)
+        return iter(self._module_list)
     
     def __getitem__(self, idx):
-        return self.modules[idx]
+        return self._module_list[idx]
     
     def __len__(self):
-        return len(self.modules)
-
-    def add_module(self, module):
-        self._modules.append(module)
+        return len(self._module_list)
 
     def append(self, module):
-        self.modules.append(module)
+        self._module_list.append(module)
 
     def extend(self, module_list):
-        self.modules.extend(module_list)
+        self._module_list.extend(module_list)
 
     def parameters(self): 
         for m in self.modules:
@@ -98,7 +97,7 @@ class ModuleList(Module):
     
     def train(self, mode=True):
         self.training = mode
-        for module in self.modules:
+        for module in self._module_list:
             module.train(mode)
 
         return self
@@ -110,10 +109,10 @@ class Embedding(Module): #padding_idx is a thing
         self.embedding = Parameter(np.random.randn(n_embeddings, embedding_dim))
 
     def forward(self, input): 
-        out = tensor(self.embedding.data.data[input], (self,))
+        out = tensor(self.embedding.data.data[input], (self.embedding.data,))
 
         def _backward():
-            np.add.at(self.embedding.grad, input, out.grad)
+            np.add.at(self.embedding.grad, input, out.grad.data)
         out._backward = _backward
 
         return out
@@ -129,21 +128,25 @@ class Linear(Module):
         # self.nodes = [Node(nin, **kwargs) for _ in range(nout)]
         super().__init__()
         self.init = init
-        if self.init == 'He': self.w = Parameter(tensor(np.random.randn(nin, nout) * np.sqrt(2.0 / nin)) )
-        if self.init == 'Xavier': self.w = Parameter(tensor(np.random.randn(nin, nout) * np.sqrt(6.0 / (nin + nout))))
-        self.b = Parameter([0 for _ in range(nout)])
+        if self.init == 'He': 
+            self.w = Parameter(np.random.randn(nin, nout) * np.sqrt(2.0 / nin))
+        elif self.init == 'Xavier': 
+            self.w = Parameter(np.random.randn(nin, nout) * np.sqrt(6.0 / (nin + nout)))
+        else:
+            self.w = Parameter(np.random.randn(nin, nout) * 0.01)
+        self.b = Parameter(np.zeros(nout))
         self.activation = activation
         
     def forward(self, x):
         x = x if isinstance(x, tensor) else tensor(x)
         out  = x @ self.w + self.b
-        if self.activation == 'relu': out = out.relu() 
-        if self.activation == 'gelu': out = out.gelu()
+        if self.activation == 'relu': out = out.relu()
+        elif self.activation == 'gelu': out = out.gelu()
 
         return out
     
     def parameters(self):
-        return [self.w, self.b]
+        yield from super().parameters()
 
     def __repr__(self):
         return f"Linear({self.w}, {self.b})"
@@ -151,19 +154,20 @@ class Linear(Module):
 class MLP(Module):
 
     def __init__(self, nin, nouts:list, activation='relu', init='He', dropout=0.0):
+        super().__init__()
         sz = [nin] + nouts
         self.layers = ModuleList([Linear(sz[i], sz[i+1], activation= activation, init=init if i!=len(nouts)-1 else 'none') for i in range(len(nouts))])
         self.dropout = Dropout(dropout) if dropout > 0 else None
 
-    def __call__(self, x, training=True):  
+    def forward(self, x):
         for layer in self.layers[:-1]:
             x = layer(x)
-            if self.dropout: x = self.dropout(x, training) 
+            if self.dropout: x = self.dropout(x)
 
         return self.layers[-1](x)
     
     def parameters(self):
-        return [p for layer in self.layers for p in layer.parameters()]
+        yield from self.layers.parameters()
 
     def __repr__(self):
         return f"MLP({self.layers})"
@@ -227,12 +231,12 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
         if not self.training:
             return x
         
-        self.mask = np.random.rand(*x.shape) > self.p #might need .astype(float)
+        self.mask = (np.random.rand(*x.data.shape) > self.p).astype(float)
         #we need a backward pass?
-        out =  tensor(x.data * self.mask / (1-self.p))
+        out =  tensor(x.data * self.mask / (1-self.p), (x,))
 
         def backward():
-            x.grad += out.grad * self.mask / (1-self.p)
+            x.grad += out.grad.data * self.mask / (1-self.p)
         out._backward = backward
 
         return out
@@ -249,7 +253,7 @@ class LayerNorm(Module):
         mean = x.mean(axis=-1, keepdims=True)
         var = ((x-mean) ** 2).mean(axis=-1, keepdims=True)
         x_hat = (x-mean) / (var+self.eps) ** 0.5
-        return self.gamma.data * x_hat + self.beta.data
+        return self.gamma * x_hat + self.beta
     
     def parameters(self):
         yield self.gamma
@@ -262,6 +266,9 @@ class Sequential(Module):
         if isinstance(args[0], OrderedDict):
             for key, module in args[0].items():
                 self.add_module(key, module)
+        elif isinstance(args[0], list):
+            for idx, module in enumerate(args[0]):
+                self.add_module(str(idx), module)
         else:
             for idx, module in enumerate(args):
                 self.add_module(str(idx), module)
@@ -280,10 +287,7 @@ class Sequential(Module):
         return self
 
     def add_module(self, key, module):
-        if key in self._modules:
-            self._modules[key].append(module)
-        else:
-            self._modules[key] = [module]
+        self._modules[key] = module
 
 
     def insert(self, idx, module:Module):
