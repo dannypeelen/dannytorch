@@ -92,7 +92,7 @@ class ModuleList(Module):
         self._module_list.extend(module_list)
 
     def parameters(self): 
-        for m in self.modules:
+        for m in self._module_list:
             yield from m.parameters() 
     
     def train(self, mode=True):
