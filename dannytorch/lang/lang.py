@@ -1,5 +1,6 @@
 from dannytorch.nn.nn import Module
 import numpy as np
+from dannytorch import tensor
 
 class rope(Module):
 
@@ -16,8 +17,10 @@ class rope(Module):
         if seq_len is None:
             seq_len = x.shape[1]
 
-        cos = self.cos_cache[:seq_len].reshape(1, seq_len, 1, -1)
-        sin = self.sin_cache[:seq_len].reshape(1, seq_len, 1, -1)
+        cos_half = self.cos_cache[:seq_len]
+        sin_half = self.sin_cache[:seq_len]
+        cos = np.concatenate([cos_half, cos_half], axis=-1).reshape(1, seq_len, 1, -1)
+        sin = np.concatenate([sin_half, sin_half], axis=-1).reshape(1, seq_len, 1, -1)
         
         return self._apply_rope(x, cos, sin)
 

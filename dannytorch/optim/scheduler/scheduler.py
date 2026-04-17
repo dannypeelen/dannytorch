@@ -27,10 +27,11 @@ class CosineAnnealingLR:
     
     def __init__(self, optimizer, t_max, eta_min=0):
         self.optimizer = optimizer
+        self.inital_lr = self.optimizer.lr
         self.t_max = t_max
         self.eta_min = eta_min
         self.last_epoch=0
         
     def step(self):
         self.last_epoch += 1
-        self.optimizer.lr = self.eta_min + 0.5 * (self.optimizer.lr - self.eta_min) * (1 + np.cos(np.pi * self.last_epoch / self.t_max))
+        self.initial_lr = self.eta_min + 0.5 * (self.optimizer.lr - self.eta_min) * (1 + np.cos(np.pi * self.last_epoch / self.t_max))

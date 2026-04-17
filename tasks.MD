@@ -1,7 +1,4 @@
-check no PyTorch stuff in RoPE
-masked_fill?
-
-build MHA
+gradient clipping?
 
 Test: Build LLM & NestedLLM (include) <- dt.llm
 

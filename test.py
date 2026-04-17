@@ -44,7 +44,7 @@ def last_logit(out):
     t._backward = _bwd
     return t
 
-def sample(seed="It was", n=80):
+def sample(seed="It was ", n=80):
     ctx = ([0]*(CONTEXT-len(seed)) + [ctoi.get(c,0) for c in seed])[-CONTEXT:]
     out = list(seed)
     for _ in range(n):
@@ -62,7 +62,7 @@ for ep in range(1, EPOCHS+1):
     for xs, y in pairs:
         pred = last_logit(model(dt.tensor(np.array([xs]), requires_grad=False)))
         loss = loss_fn([pred], [y])
-        model.zero_grad(); loss.backward(); sched.step()
+        model.zero_grad(); loss.backward(); opt.step(); sched.step()
         epoch_loss += float(loss.data)
     if ep % 50 == 0:
         print(f"[ep {ep:3d}] loss {epoch_loss/len(pairs):.4f} | {sample()!r}")

@@ -11,7 +11,7 @@ class Parameter(tensor):
 
 
     def zero_grad(self):
-        self.grad = np.zeros_like(self.data.data)
+        self.grad.data = np.zeros_like(self.data.data)
 
     def __repr__(self):
         return f"Parameter({self.data})"
@@ -108,11 +108,12 @@ class Embedding(Module): #padding_idx is a thing
         super().__init__()
         self.embedding = Parameter(np.random.randn(n_embeddings, embedding_dim))
 
-    def forward(self, input): 
-        out = tensor(self.embedding.data.data[input], (self.embedding.data,))
+    def forward(self, input):
+        idx = input.data if isinstance(input, tensor) else input
+        out = tensor(self.embedding.data.data[idx], (self.embedding.data,))
 
         def _backward():
-            np.add.at(self.embedding.grad, input, out.grad.data)
+            np.add.at(self.embedding.grad.data, idx, out.grad.data)
         out._backward = _backward
 
         return out
@@ -214,7 +215,7 @@ class CrossEntropyLoss:
             for logits, prob, y in zip(preds, probs_list, labels):
                 grad = prob.copy()
                 grad[int(y)] -= 1.0
-                logits.grad.data += (grad / len(preds)) * out.grad.data
+                logits.grad += (grad / len(preds)) * out.grad
 
         out._backward = _backward
 
@@ -236,7 +237,7 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
         out =  tensor(x.data * self.mask / (1-self.p), (x,))
 
         def backward():
-            x.grad += out.grad.data * self.mask / (1-self.p)
+            x.grad += out.grad * self.mask / (1-self.p)
         out._backward = backward
 
         return out
@@ -260,13 +261,13 @@ class LayerNorm(Module):
         def _backward():
             N = x_data.shape[-1]
             g = self.gamma.data.data
-            dy = out.grad.data
+            dy = out.grad
             dx_hat = dy * g
             dvar = (dx_hat * (x_data - mean) * -0.5 * (var + self.eps) ** -1.5).sum(axis=-1, keepdims=True)
             dmean = (-dx_hat / np.sqrt(var + self.eps)).sum(axis=-1, keepdims=True) + dvar * (-2 * (x_data - mean)).mean(axis=-1, keepdims=True)
-            x.grad.data += dx_hat / np.sqrt(var + self.eps) + dvar * 2 * (x_data - mean) / N + dmean / N
-            self.gamma.grad.data += (dy * x_hat).sum(axis=tuple(range(dy.ndim - 1)))
-            self.beta.grad.data += dy.sum(axis=tuple(range(dy.ndim - 1)))
+            x.grad += dx_hat / np.sqrt(var + self.eps) + dvar * 2 * (x_data - mean) / N + dmean / N
+            self.gamma.grad += (dy * x_hat).sum(axis=tuple(range(dy.ndim - 1)))
+            self.beta.grad += dy.sum(axis=tuple(range(dy.ndim - 1)))
         out._backward = _backward
 
         return out
@@ -282,6 +283,9 @@ class Sequential(Module):
         self._seq = []
         if len(args) == 1 and isinstance(args[0], OrderedDict):
             for module in args[0].values():
+                self._seq.append(module)
+        elif len(args) == 1 and isinstance(args[0], list):
+            for module in args[0]:
                 self._seq.append(module)
         else:
             for module in args:
@@ -304,11 +308,11 @@ class Sequential(Module):
     
     def extend(self, other):
         for layer in other:
-            self._seq.append(other)
+            self._seq.append(layer)
     
     def parameters(self):
         for m in self._seq:
-            yield m.parameters()
+            yield from m.parameters()
     
 class ReLU(Module):
     def forward(self, x):
