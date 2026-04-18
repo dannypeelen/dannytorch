@@ -1,7 +1,4 @@
-try:
-    import cupy as np
-except ImportError:
-    import numpy as np
+import numpy as np
 from typing import List
 
 def _reduce_to(grad, shape):

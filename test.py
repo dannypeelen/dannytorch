@@ -3,10 +3,7 @@ import dannytorch.llm as llm
 import dannytorch.optim as optim
 import dannytorch.optim.scheduler as scheduler
 import dannytorch.nn as nn
-try:
-    import cupy as np
-except ImportError:
-    import numpy as np
+import numpy as np
 #================LLM TEST=====================
 CORPUS = """
 It was the best of times, it was the worst of times, it was the age of wisdom,
@@ -47,6 +44,7 @@ def last_logit(out):
     return t
 
 def sample(seed="It was ", n=80):
+    model.eval()
     ctx = ([0]*(CONTEXT-len(seed)) + [ctoi.get(c,0) for c in seed])[-CONTEXT:]
     out = list(seed)
     for _ in range(n):
@@ -54,6 +52,7 @@ def sample(seed="It was ", n=80):
         p  = np.exp(lg.data - lg.data.max()); p /= p.sum()
         nxt = np.random.choice(V, p=p)
         out.append(itoc[nxt]); ctx = ctx[1:] + [nxt]
+    model.train()
     return "".join(out)
 
 print(f"vocab={V}  pairs={len(pairs)}  ctx={CONTEXT}  epochs={EPOCHS}\n")

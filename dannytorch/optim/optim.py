@@ -7,11 +7,11 @@ import numpy as np
 class Adam:
 
     def __init__(self, params,  lr: float = 0.01, betas=[0.9, 0.999]):
-        self.params = params
+        self.params = list(params)
         self.lr = lr
         self.betas = betas
-        self.v = [np.zeros_like(p.data.data) for p in params]
-        self.s = [np.zeros_like(p.data.data) for p in params]
+        self.v = [np.zeros_like(p.data.data) for p in self.params]
+        self.s = [np.zeros_like(p.data.data) for p in self.params]
         self.t = 0
 
     def step(self, eps=1e-8):
