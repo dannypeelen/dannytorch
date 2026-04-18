@@ -59,13 +59,19 @@ print(f"[ep   0] init | {sample()!r}\n")
 
 for ep in range(1, EPOCHS+1):
     np.random.shuffle(pairs); epoch_loss = 0.0
-    for xs, y in pairs:
+    for i, (xs, y) in enumerate(pairs):
         pred = last_logit(model(dt.tensor(np.array([xs]), requires_grad=False)))
         loss = loss_fn([pred], [y])
-        model.zero_grad(); loss.backward(); opt.step(); sched.step()
+        model.zero_grad(); loss.backward(); opt.step()
         epoch_loss += float(loss.data)
+        done = i + 1
+        bar  = ('█' * int(done / len(pairs) * 20)).ljust(20)
+        print(f"\r[ep {ep:3d}/{EPOCHS}] |{bar}| {done}/{len(pairs)}  loss={epoch_loss/done:.4f}  lr={opt.lr:.2e}", end='', flush=True)
+    sched.step()
     if ep % 50 == 0:
-        print(f"[ep {ep:3d}] loss {epoch_loss/len(pairs):.4f} | {sample()!r}")
+        print(f"\n[ep {ep:3d}] loss {epoch_loss/len(pairs):.4f} | {sample()!r}")
+    else:
+        print()
 
 
 # #=============MNIST TEST====================
