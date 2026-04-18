@@ -1,7 +1,10 @@
 import dannytorch.nn.nn as nn
 import dannytorch.lang as lang
-import numpy as np
-
+try:
+    import cupy as np
+except ImportError:
+    import numpy as np
+    
 """
 w/ Module update my require super().__init__
 need_weights maybe?

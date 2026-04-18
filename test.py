@@ -3,8 +3,10 @@ import dannytorch.llm as llm
 import dannytorch.optim as optim
 import dannytorch.optim.scheduler as scheduler
 import dannytorch.nn as nn
-import numpy as np
-
+try:
+    import cupy as np
+except ImportError:
+    import numpy as np
 #================LLM TEST=====================
 CORPUS = """
 It was the best of times, it was the worst of times, it was the age of wisdom,

@@ -1,5 +1,8 @@
-import numpy as np
-
+try:
+    import cupy as np
+except ImportError:
+    import numpy as np
+    
 class StepLR:
     
     def __init__(self, optimizer, step_size=10, gamma=0.1):

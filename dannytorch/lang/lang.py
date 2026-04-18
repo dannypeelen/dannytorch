@@ -1,5 +1,8 @@
 from dannytorch.nn.nn import Module
-import numpy as np
+try:
+    import cupy as np
+except ImportError:
+    import numpy as np    
 from dannytorch import tensor
 
 class rope(Module):
