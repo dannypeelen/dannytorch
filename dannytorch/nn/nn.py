@@ -143,10 +143,9 @@ class Linear(Module):
         
     def forward(self, x):
         x = x if isinstance(x, tensor) else tensor(x)
-        out  = x @ self.w + self.b
+        out = x @ self.w + self.b
         if self.activation == 'relu': out = out.relu()
         elif self.activation == 'gelu': out = out.gelu()
-
         return out
     
     def parameters(self):

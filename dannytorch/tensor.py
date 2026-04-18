@@ -161,14 +161,14 @@ class tensor:
     
     def softmax(self, axis=-1):
         e_x = np.exp(self.data - np.max(self.data, axis=axis, keepdims=True))
-        out = tensor(e_x / np.sum(e_x, keepdims=True), (self,))
+        out = tensor(e_x / np.sum(e_x, axis=axis, keepdims=True), (self,))
 
         def _backward():
             # jacobian-vector product of softmax:
             if not self.requires_grad:
                 return
             # self.grad += out.data * (out.grad - np.dot(out.grad, out.data))
-            self.grad += (out.grad * out.data).sum(axis=axis, keepdims=True)
+            self.grad += out.data * (out.grad - (out.grad * out.data).sum(axis=axis, keepdims=True))
         out._backward = _backward
 
         return out

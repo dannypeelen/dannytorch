@@ -4,7 +4,7 @@ try:
     import cupy as np
 except ImportError:
     import numpy as np
-    
+
 """
 w/ Module update my require super().__init__
 need_weights maybe?
@@ -71,7 +71,7 @@ class TransformerBlock(nn.Module):
         self.mlp = nn.Sequential([
             nn.Linear(d_model, 4*d_model),
             nn.ReLU(),
-            nn.Linear(4*d_model, d_model),
+            nn.Linear(4*d_model, d_model, activation=None),
             nn.Dropout(dropout)
         ])
 
@@ -101,7 +101,7 @@ class Transformer(nn.Module):
         ])
 
         self.ln = nn.LayerNorm(d_model)
-        self.out_head = nn.Linear(d_model, vocab_size)
+        self.out_head = nn.Linear(d_model, vocab_size, activation=None)
 
     def forward(self, x):
         _, seq_len = x.shape #check for 3D
