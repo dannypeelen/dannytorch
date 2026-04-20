@@ -17,7 +17,7 @@ class Adam:
     def step(self, eps=1e-8):
         self.t += 1
         for i, param in enumerate(self.params):
-            grad = param.grad.data
+            grad = param.grad
             # print(f"Shape: {param.shape}, velocity: {self.v[i-1]}")
             self.v[i] = self.betas[0] * self.v[i] + (1 - self.betas[0]) * grad
             self.s[i] = self.betas[1] * self.s[i] + (1 - self.betas[1]) * (grad ** 2)
@@ -41,7 +41,7 @@ class RMSProp:
     def step(self, eps=1e-8):
         self.t += 1
         for i, param in enumerate(self.params):
-            grad = param.grad.data
+            grad = param.grad
             self.v[i] = self.betas[0] * self.v[i] + (1-self.betas[0]) * grad ** 2
             #bias correction
 

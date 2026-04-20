@@ -7,11 +7,10 @@ class Parameter(tensor):
     def __init__(self, data=None):
         super().__init__(data, requires_grad=True)
         self.data = data if isinstance(data, tensor) else tensor(np.array(data, dtype=float))
-        self.grad = tensor(np.zeros_like(self.data.data))
-
+        self.grad = np.zeros_like(self.data.data)
 
     def zero_grad(self):
-        self.grad.data = np.zeros_like(self.data.data)
+        self.grad[:] = 0
 
     def __repr__(self):
         return f"Parameter({self.data})"
@@ -113,7 +112,7 @@ class Embedding(Module): #padding_idx is a thing
         out = tensor(self.embedding.data.data[idx], (self.embedding.data,))
 
         def _backward():
-            np.add.at(self.embedding.grad.data, idx, out.grad.data)
+            np.add.at(self.embedding.grad, idx, out.grad)
         out._backward = _backward
 
         return out
