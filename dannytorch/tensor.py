@@ -82,7 +82,7 @@ class tensor:
             #broadcast reductions
             while grad_self.ndim > self.arr.ndim:
                 grad_self = grad_self.sum(axis=0)
-            while grad_other.ndim > self.arr.ndim:
+            while grad_other.ndim > other.arr.ndim:
                 grad_other = grad_other.sum(axis=0)
                 
             self.grad += grad_self
