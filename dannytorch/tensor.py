@@ -356,6 +356,9 @@ class tensor:
         self.grad = np.ones_like(self.data)
         for v in reversed(topo):
             v._backward()
+        for v in topo:
+            v._backward = lambda: None
+            v._prev = set()
 
 
 class rand(tensor):

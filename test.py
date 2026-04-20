@@ -4,6 +4,7 @@ import dannytorch.optim as optim
 import dannytorch.optim.scheduler as scheduler
 import dannytorch.nn as nn
 import numpy as np
+import gc
 #================LLM TEST=====================
 CORPUS = """
 It was the best of times, it was the worst of times, it was the age of wisdom,
@@ -53,6 +54,7 @@ def sample(seed="It was ", n=80):
         nxt = np.random.choice(V, p=p)
         out.append(itoc[nxt]); ctx = ctx[1:] + [nxt]
     model.train()
+    gc.collect()
     return "".join(out)
 
 print(f"vocab={V}  pairs={len(pairs)}  ctx={CONTEXT}  epochs={EPOCHS}\n")
@@ -69,6 +71,7 @@ for ep in range(1, EPOCHS+1):
         bar  = ('█' * int(done / len(pairs) * 20)).ljust(20)
         print(f"\r[ep {ep:3d}/{EPOCHS}] |{bar}| {done}/{len(pairs)}  loss={epoch_loss/done:.4f}  lr={opt.lr:.2e}", end='', flush=True)
     sched.step()
+    gc.collect()
     if ep % 50 == 0:
         print(f"\n[ep {ep:3d}] loss {epoch_loss/len(pairs):.4f} | {sample()!r}")
     else:
