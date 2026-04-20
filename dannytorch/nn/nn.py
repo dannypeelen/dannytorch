@@ -195,23 +195,19 @@ class CrossEntropyLoss:
         pass
 
     def __call__(self, preds: list, labels) -> tensor:
-        #softmax
-
-        probs_list = []
         val_loss = 0.0
-
         for logits, y in zip(preds, labels):
             e_x = np.exp(logits.data - np.max(logits.data))
             prob = e_x / np.sum(e_x)
-            probs_list.append(prob)
             val_loss -= np.log(prob[int(y)] + 1e-9)
         val_loss = val_loss / len(preds)
 
         out = tensor(np.array(val_loss), tuple(preds))
 
         def _backward():
-            for logits, prob, y in zip(preds, probs_list, labels):
-                grad = prob.copy()
+            for logits, y in zip(preds, labels):
+                e_x = np.exp(logits.data - np.max(logits.data))
+                grad = e_x / np.sum(e_x)
                 grad[int(y)] -= 1.0
                 logits.grad += (grad / len(preds)) * out.grad
 
@@ -224,18 +220,16 @@ class Dropout(Module): #for training, but not for inference! TODO: make sure thi
     def __init__(self, p=0.5):
         super().__init__()
         self.p = p
-        self.mask = None
-        
+
     def forward(self, x):
         if not self.training:
             return x
-        
-        self.mask = (np.random.rand(*x.data.shape) > self.p).astype(float)
-        #we need a backward pass?
-        out =  tensor(x.data * self.mask / (1-self.p), (x,))
+
+        mask = (np.random.rand(*x.data.shape) > self.p).astype(float)
+        out  = tensor(x.data * mask / (1-self.p), (x,))
 
         def backward():
-            x.grad += out.grad * self.mask / (1-self.p)
+            x.grad += out.grad * mask / (1-self.p)
         out._backward = backward
 
         return out
@@ -248,7 +242,7 @@ class LayerNorm(Module):
         self.gamma = Parameter(np.ones(features)) 
         self.beta = Parameter(np.zeros(features)) 
 
-    def forward(self, x):  
+    def forward(self, x):
         x_data = x.data if isinstance(x.data, np.ndarray) else x.data.data
         mean = x_data.mean(axis=-1, keepdims=True)
         var = ((x_data - mean) ** 2).mean(axis=-1, keepdims=True)
@@ -257,15 +251,19 @@ class LayerNorm(Module):
         out = tensor(self.gamma.data.data * x_hat + self.beta.data.data, (x, self.gamma.data, self.beta.data))
 
         def _backward():
-            N = x_data.shape[-1]
-            g = self.gamma.data.data
-            dy = out.grad
-            dx_hat = dy * g
-            dvar = (dx_hat * (x_data - mean) * -0.5 * (var + self.eps) ** -1.5).sum(axis=-1, keepdims=True)
-            dmean = (-dx_hat / np.sqrt(var + self.eps)).sum(axis=-1, keepdims=True) + dvar * (-2 * (x_data - mean)).mean(axis=-1, keepdims=True)
-            x.grad += dx_hat / np.sqrt(var + self.eps) + dvar * 2 * (x_data - mean) / N + dmean / N
-            self.gamma.grad += (dy * x_hat).sum(axis=tuple(range(dy.ndim - 1)))
-            self.beta.grad += dy.sum(axis=tuple(range(dy.ndim - 1)))
+            xd   = x.data if isinstance(x.data, np.ndarray) else x.data.data
+            mu   = xd.mean(axis=-1, keepdims=True)
+            v    = ((xd - mu) ** 2).mean(axis=-1, keepdims=True)
+            xh   = (xd - mu) / np.sqrt(v + self.eps)
+            N    = xd.shape[-1]
+            g    = self.gamma.data.data
+            dy   = out.grad
+            dxh  = dy * g
+            dvar = (dxh * (xd - mu) * -0.5 * (v + self.eps) ** -1.5).sum(axis=-1, keepdims=True)
+            dmean = (-dxh / np.sqrt(v + self.eps)).sum(axis=-1, keepdims=True) + dvar * (-2 * (xd - mu)).mean(axis=-1, keepdims=True)
+            x.grad += dxh / np.sqrt(v + self.eps) + dvar * 2 * (xd - mu) / N + dmean / N
+            self.gamma.grad += (dy * xh).sum(axis=tuple(range(dy.ndim - 1)))
+            self.beta.grad  += dy.sum(axis=tuple(range(dy.ndim - 1)))
         out._backward = _backward
 
         return out

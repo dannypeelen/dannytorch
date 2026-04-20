@@ -18,7 +18,6 @@ class tensor:
         self._backward = lambda: None
         self.requires_grad = requires_grad
         self._prev = set(_children)
-        self.T = np.transpose(np.array(data))
 
     @property
     def arr(self):

@@ -22,9 +22,11 @@ class MultiheadAttention(nn.Module):
         self.o_proj = nn.Linear(d_model, d_model)
 
         self.use_rope = use_rope
-        self.pos_enc = lang.rope(self.head_dim) 
+        self.pos_enc = lang.rope(self.head_dim)
         self.attn_dropout = nn.Dropout(dropout)
         self.batch_first = batch_first
+        self.scale = np.sqrt(self.head_dim)
+        self._causal_mask = {}  # cached per seq_len
 
     def forward(self, x):
         B, T, _ = x.shape #B: batch size, T: sequence length
@@ -45,9 +47,10 @@ class MultiheadAttention(nn.Module):
         v = v.transpose(1, 2)
         k = k.transpose(1, 2)
 
-        out = (q @ k.transpose(-2, -1)) / np.sqrt(self.head_dim) #(B, H, T, T)
-        mask = np.triu(np.ones((T, T), dtype=bool), k=1)
-        out = out.masked_fill(mask, -np.inf)
+        out = (q @ k.transpose(-2, -1)) / self.scale #(B, H, T, T)
+        if T not in self._causal_mask:
+            self._causal_mask[T] = np.triu(np.ones((T, T), dtype=bool), k=1)
+        out = out.masked_fill(self._causal_mask[T], -np.inf)
         attn = out.softmax()
         #dropout
         attn = self.attn_dropout(attn)
@@ -88,7 +91,6 @@ class Transformer(nn.Module):
     def __init__(self, vocab_size, d_model=128, n_heads=4, n_blocks=6, max_seq_len=512, dropout=0.15):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model)
-        self.pos_enc = lang.rope(d_model, seq_len=max_seq_len)
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
 
