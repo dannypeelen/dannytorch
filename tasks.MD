@@ -1,8 +1,8 @@
+Introduce batching
+
 gradient clipping?
 
-Test: Build LLM & NestedLLM (include) <- dt.llm
-
-PUBLISH!----------------------------
+Add in warmup option for schedulers
 
 maybe go for GQA, Flash/Flex Attention (this might need kernels)
 
