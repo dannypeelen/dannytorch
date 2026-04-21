@@ -191,29 +191,50 @@ class MSELoss:
 #    (this is the fused softmax+CE gradient — the jacobian collapses cleanly to this)
 class CrossEntropyLoss:
 
-    def __init__(self):
-        pass
+    def __init__(self, batched=False):
+        self.batched = batched
 
-    def __call__(self, preds: list, labels) -> tensor:
-        val_loss = 0.0
-        for logits, y in zip(preds, labels):
-            e_x = np.exp(logits.data - np.max(logits.data))
-            prob = e_x / np.sum(e_x)
-            val_loss -= np.log(prob[int(y)] + 1e-9)
-        val_loss = val_loss / len(preds)
+    def __call__(self, preds, labels) -> tensor:
+        if self.batched:
+            # preds: (N, V) tensor; labels: length-N sequence of ints
+            logits = preds
+            labels = np.array(labels, dtype=int)
+            N = logits.data.shape[0]
+            e_x = np.exp(logits.data - logits.data.max(axis=1, keepdims=True))
+            prob = e_x / e_x.sum(axis=1, keepdims=True)
+            val_loss = -np.log(prob[np.arange(N), labels] + 1e-9).mean()
 
-        out = tensor(np.array(val_loss), tuple(preds))
+            out = tensor(np.array(val_loss), (logits,))
 
-        def _backward():
+            def _backward():
+                e_x = np.exp(logits.data - logits.data.max(axis=1, keepdims=True))
+                grad = e_x / e_x.sum(axis=1, keepdims=True)
+                grad[np.arange(N), labels] -= 1.0
+                grad /= N
+                logits.grad += grad * out.grad
+
+            out._backward = _backward
+            return out
+        else:
+            # preds: list of (V,) tensors; labels: list of ints
+            val_loss = 0.0
             for logits, y in zip(preds, labels):
                 e_x = np.exp(logits.data - np.max(logits.data))
-                grad = e_x / np.sum(e_x)
-                grad[int(y)] -= 1.0
-                logits.grad += (grad / len(preds)) * out.grad
+                prob = e_x / np.sum(e_x)
+                val_loss -= np.log(prob[int(y)] + 1e-9)
+            val_loss = val_loss / len(preds)
 
-        out._backward = _backward
+            out = tensor(np.array(val_loss), tuple(preds))
 
-        return out
+            def _backward():
+                for logits, y in zip(preds, labels):
+                    e_x = np.exp(logits.data - np.max(logits.data))
+                    grad = e_x / np.sum(e_x)
+                    grad[int(y)] -= 1.0
+                    logits.grad += (grad / len(preds)) * out.grad
+
+            out._backward = _backward
+            return out
         
 class Dropout(Module): #for training, but not for inference! TODO: make sure this is good w/ Module
     
