@@ -335,8 +335,8 @@ class ReLU(Module):
     def forward(self, x):
         return x.relu()
 
-#not sure how useful this is, plus silu incomplete
-class SwiGLU:
+#i believe technically this is incomplete, but not used
+class SwiGLU(Module):
     
     def __init__(self, nin, nout):
         self.w1 = Linear(nin, nout)

@@ -118,14 +118,4 @@ class Transformer(nn.Module):
 
         return logits #hooray!
 
-#see what would the difference between this and Transformer (this might be verbose)    
-class GPT(nn.Module):
-
-    def __init__(self):
-        pass
     
-    
-class NestedLLM(nn.Module):
-    
-    def __init__(self):
-        pass

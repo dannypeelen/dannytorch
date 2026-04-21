@@ -278,7 +278,7 @@ class tensor:
                 slices = [slice(None)] * self.data.ndim
                 slices[axis] = slice(s, e)
                 self.grad[tuple(slices)] += chunk.grad
-                pass
+                
             
             chunk._backward = _backward
             out.append(chunk)
