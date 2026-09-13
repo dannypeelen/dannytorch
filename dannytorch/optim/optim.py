@@ -10,8 +10,8 @@ class Adam:
         self.params = list(params)
         self.lr = lr
         self.betas = betas
-        self.v = [np.zeros_like(p.data.data) for p in self.params]
-        self.s = [np.zeros_like(p.data.data) for p in self.params]
+        self.v = [np.zeros_like(p.data) for p in self.params]
+        self.s = [np.zeros_like(p.data) for p in self.params]
         self.t = 0
 
     def step(self, eps=1e-8):
@@ -27,7 +27,7 @@ class Adam:
             s_hat = self.s[i] / (1- self.betas[1] ** self.t)
             
             delta_w = -self.lr * v_hat / np.sqrt(s_hat + eps)
-            param.data.data = param.data.data + delta_w
+            param.data = param.data + delta_w
             
 class RMSProp:
     
@@ -47,7 +47,7 @@ class RMSProp:
 
             v_hat = self.v[i] / (1-self.betas[0] ** self.t)
 
-            param.data.data = param.data.data - self.lr * grad / (np.sqrt(v_hat + eps))
+            param.data = param.data - self.lr * grad / (np.sqrt(v_hat + eps))
 
 
 #works only w/o momentum - same error as Adam  
@@ -63,7 +63,7 @@ class SGD:
         if self.momentum:
             for i, param in enumerate(self.params):
                 self.velocities[i] = self.momentum * self.velocities[i] - self.lr * param.grad
-                param.data.data = param.data.data + self.velocities[i]
+                param.data = param.data + self.velocities[i]
         else:
             for param in self.params:
-                param.data.data = param.data.data - (self.lr * param.grad)
+                param.data = param.data - (self.lr * param.grad)

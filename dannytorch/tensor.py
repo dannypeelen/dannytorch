@@ -21,8 +21,7 @@ class tensor:
 
     @property
     def arr(self):
-        d = self.data
-        return d.data if isinstance(d, tensor) else d
+        return self.data
 
     def __str__(self):
         return f"Tensor(Data:{self.data} grad:{self.grad})"

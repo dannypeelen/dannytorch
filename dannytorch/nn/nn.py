@@ -5,9 +5,8 @@ from typing import OrderedDict
 class Parameter(tensor):
 
     def __init__(self, data=None):
+        data = np.asarray(data, dtype=float)
         super().__init__(data, requires_grad=True)
-        self.data = data if isinstance(data, tensor) else tensor(np.array(data, dtype=float))
-        self.grad = np.zeros_like(self.data.data)
 
     def zero_grad(self):
         self.grad[:] = 0
@@ -39,13 +38,8 @@ class Module:
 
     def train(self, mode=True):
         self.training = mode
-        for val in vars(self).values():
-            if isinstance(val, Module):
-                val.train(mode)
-            elif isinstance(val, list):
-                for item in val:
-                    if isinstance(item, Module):
-                        item.train(mode)
+        for module in self._modules.values():
+            module.train(mode)
 
         return self
 
@@ -109,7 +103,7 @@ class Embedding(Module): #padding_idx is a thing
 
     def forward(self, input):
         idx = input.data if isinstance(input, tensor) else input
-        out = tensor(self.embedding.data.data[idx], (self.embedding.data,))
+        out = tensor(self.embedding.data[idx], (self.embedding.data,))
 
         def _backward():
             np.add.at(self.embedding.grad, idx, out.grad)
@@ -264,20 +258,20 @@ class LayerNorm(Module):
         self.beta = Parameter(np.zeros(features)) 
 
     def forward(self, x):
-        x_data = x.data if isinstance(x.data, np.ndarray) else x.data.data
+        x_data = x.data         
         mean = x_data.mean(axis=-1, keepdims=True)
         var = ((x_data - mean) ** 2).mean(axis=-1, keepdims=True)
         x_hat = (x_data - mean) / np.sqrt(var + self.eps)
 
-        out = tensor(self.gamma.data.data * x_hat + self.beta.data.data, (x, self.gamma.data, self.beta.data))
+        out = tensor(self.gamma.data * x_hat + self.beta.data, (x, self.gamma, self.beta))
 
         def _backward():
-            xd   = x.data if isinstance(x.data, np.ndarray) else x.data.data
+            xd   = x.data
             mu   = xd.mean(axis=-1, keepdims=True)
             v    = ((xd - mu) ** 2).mean(axis=-1, keepdims=True)
             xh   = (xd - mu) / np.sqrt(v + self.eps)
             N    = xd.shape[-1]
-            g    = self.gamma.data.data
+            g    = self.gamma.data
             dy   = out.grad
             dxh  = dy * g
             dvar = (dxh * (xd - mu) * -0.5 * (v + self.eps) ** -1.5).sum(axis=-1, keepdims=True)
