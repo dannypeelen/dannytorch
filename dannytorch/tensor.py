@@ -178,7 +178,8 @@ class tensor:
             if not self.requires_grad:
                 return
             dtanh =  (1- tanh_out ** 2)
-            self.grad += out.grad * 0.5 * (1 + tanh_out) + self.data * dtanh * np.sqrt(2 / np.pi) * (1 + 3 * 0.044715 * self.data ** 2)
+            local_grad = 0.5 * (1 + tanh_out) + 0.5 * self.data * dtanh * np.sqrt(2 / np.pi) * (1 + 3 * 0.044715 * self.data ** 2)
+            self.grad += out.grad * local_grad
         out._backward = _backward
 
         return out

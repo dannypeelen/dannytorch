@@ -45,6 +45,11 @@ class LinearWarmup:
         self.target_lr = optimizer.lr
         self.t = 0
         self.done = warmup_steps <= 0
+        if not self.done:
+            # without this, optimizer.lr stays at target_lr until the first
+            # .step() call, so the very first optimizer step (taken before any
+            # scheduler.step()) runs at full LR instead of the warmup start
+            self.optimizer.lr = self.start_lr
 
     def step(self):
         if self.done:
