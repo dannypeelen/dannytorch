@@ -1,4 +1,4 @@
-from .llm import NestedLLM, MultiheadAttention, Transformer, GPT
+from .llm import MultiheadAttention, Transformer, GPT
 
 __all__ = [
     "MultiheadAttention",
