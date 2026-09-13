@@ -1,7 +1,7 @@
-from .llm import MultiheadAttention, Transformer, GPT
+from .llm import MultiheadAttention, Transformer, TransformerBlock
 
 __all__ = [
     "MultiheadAttention",
     "Transformer",
-    "GPT"
+    "TransformerBlock"
 ]
