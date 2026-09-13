@@ -69,20 +69,19 @@ class TransformerBlock(nn.Module):
 
         #self.mlp = nn.MLP() #TODO: figure out defaults, see if we can build this over sequential
         self.mlp = nn.Sequential([
-            nn.Linear(d_model, 4*d_model),
-            nn.ReLU(),
+            nn.Linear(d_model, 4*d_model, activation='gelu'),
             nn.Linear(4*d_model, d_model, activation=None),
             nn.Dropout(dropout)
         ])
 
     def forward(self, x):
-        attn_out = self.attn(x)
+        attn_out = self.attn(self.ln1(x))
         x = x + attn_out
-        x = self.ln1(x)
 
-        mlp_out = self.mlp(x)
+        mlp_out = self.mlp(self.ln2(x))
         x = x + mlp_out
-        x = self.ln2(x)
+
+        #x = x + sublayer(ln(x))  -- pre-LN
 
         return x #hooray!
     

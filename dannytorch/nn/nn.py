@@ -103,7 +103,7 @@ class Embedding(Module): #padding_idx is a thing
 
     def forward(self, input):
         idx = input.data if isinstance(input, tensor) else input
-        out = tensor(self.embedding.data[idx], (self.embedding.data,))
+        out = tensor(self.embedding.data[idx], (self.embedding,))
 
         def _backward():
             np.add.at(self.embedding.grad, idx, out.grad)

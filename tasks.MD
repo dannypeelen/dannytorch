@@ -1,6 +1,6 @@
 Introduce batching
 
-gradient clipping?
+gradient clipping!
 
 Add in warmup option for schedulers
 
@@ -21,6 +21,6 @@ Optimizer/Scheduler: DONE
 
 Activations:  DONE
 
-nn: bug sweep
+nn: DONE
 
-LLM: MHA, RoPE
+LLM: DONE
