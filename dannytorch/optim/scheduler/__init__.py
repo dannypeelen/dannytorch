@@ -1,3 +1,3 @@
-from .scheduler import StepLR, ExponentialLR, CosineAnnealingLR
+from .scheduler import StepLR, ExponentialLR, CosineAnnealingLR, LinearWarmup
 
-__all__ = ['StepLR', 'ExponentialLR', 'CosineAnnealingLR']
+__all__ = ['StepLR', 'ExponentialLR', 'CosineAnnealingLR', 'LinearWarmup']

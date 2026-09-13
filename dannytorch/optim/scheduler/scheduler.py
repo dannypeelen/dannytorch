@@ -35,3 +35,27 @@ class CosineAnnealingLR:
     def step(self):
         self.last_epoch += 1
         self.optimizer.lr = self.eta_min + 0.5 * (self.initial_lr - self.eta_min) * (1 + np.cos(np.pi * self.last_epoch / self.t_max))
+
+class LinearWarmup:
+
+    def __init__(self, optimizer, warmup_steps, start_lr=0.0):
+        self.optimizer = optimizer
+        self.warmup_steps = warmup_steps
+        self.start_lr = start_lr
+        self.target_lr = optimizer.lr
+        self.t = 0
+        self.done = warmup_steps <= 0
+
+    def step(self):
+        if self.done:
+            return
+        
+        self.t += 1
+        if self.t >= self.warmup_steps:
+            self.optimizer.lr = self.target_lr
+            self.done = True
+        else:
+            frac = self.t / self.warmup_steps
+            self.optimizer.lr = self.start_lr + frac * (self.target_lr - self.start_lr)
+
+            

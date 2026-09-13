@@ -67,3 +67,15 @@ class SGD:
         else:
             for param in self.params:
                 param.data = param.data - (self.lr * param.grad)
+
+
+def clip_grad_norm_(params, max_norm, eps=1e-6):
+    params = list(params)
+    total = np.sqrt(sum(np.sum(p.grad**2) for p in params))
+
+    if total > max_norm:
+        scale = max_norm / (total + eps)
+        for p in params:
+            p.grad *= scale
+
+    return total

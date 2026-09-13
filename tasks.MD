@@ -1,9 +1,5 @@
 Introduce batching
 
-gradient clipping!
-
-Add in warmup option for schedulers
-
 maybe go for GQA, Flash/Flex Attention (this might need kernels)
 
 precision optimization (float32 for grad, float16 forward)
